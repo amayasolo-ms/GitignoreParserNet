@@ -17,6 +17,8 @@
     <Copyright>Guiorgy</Copyright>
     <Description>A simple yet complete .gitignore parser for .NET.
 Supports all features listed in the git-scm gitignore manpage.</Description>
+    <PackageIcon>Gitignore.png</PackageIcon>
+    <PackageIconUrl />
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -32,6 +34,10 @@ Supports all features listed in the git-scm gitignore manpage.</Description>
     <Compile Remove="Tests\**" />
     <EmbeddedResource Remove="Tests\**" />
     <None Remove="Tests\**" />
+    <None Include="Gitignore.png">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
   </ItemGroup>
 
   <ItemGroup>
