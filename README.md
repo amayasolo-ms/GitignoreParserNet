@@ -49,7 +49,7 @@ static List<string> ListFileNames(string directoryPath)
 
     List<string> files = new List<string>
     {
-        dir.FullName
+        dir.FullName + '/'
     };
     foreach (FileInfo file in dir.GetFiles())
         files.Add(file.FullName);
