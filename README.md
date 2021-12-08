@@ -4,7 +4,9 @@ A simple yet *complete* [`.gitignore`](https://git-scm.com/docs/gitignore#_patte
 
 ## Installation
 
-`npm install @gerhobbelt/gitignore-parser`
+You can find the Nuget Pachage [here](https://www.nuget.org/packages/GitignoreParserNet/0.2.0.9), or just:
+
+`Install-Package GitignoreParserNet -Version 0.2.0.9`
 
 ## Features
 
