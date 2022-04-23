@@ -1,23 +1,25 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
+using static GitignoreParserNet.RegexPatterns;
 
 namespace GitignoreParserNet
 {
     public sealed class GitignoreParser
     {
-        private readonly (Regex, Regex[]) Positives;
-        private readonly (Regex, Regex[]) Negatives;
+        private readonly (Regex Merged, Regex[] Individual) Positives;
+        private readonly (Regex Merged, Regex[] Individual) Negatives;
 
         public GitignoreParser(string content)
         {
             (Positives, Negatives) = Parse(content);
         }
 
-        public static ((Regex, Regex[]) positives, (Regex, Regex[]) negatives) Parse(string content)
+        public static ((Regex Merged, Regex[] Individual) positives, (Regex Merged, Regex[] Individual) negatives) Parse(string content)
         {
             (List<string> positive, List<string> negative) = content
                 .Split(new string[] { "\r\n", "\r", "\n" }, StringSplitOptions.None)
@@ -35,11 +37,11 @@ namespace GitignoreParserNet
                     },
                     ((List<string> positive, List<string> negative) lists) => lists
                 );
-            (Regex, Regex[]) submatch(List<string> list)
+            static (Regex Merged, Regex[] Individual) Submatch(List<string> list)
             {
                 if (list.Count == 0)
                 {
-                    return (new Regex("$^"), new Regex[0]);
+                    return (MatchEmptyRegex, new Regex[0]);
                 }
                 else
                 {
@@ -50,7 +52,7 @@ namespace GitignoreParserNet
                     );
                 }
             }
-            return (submatch(positive), submatch(negative));
+            return (Submatch(positive), Submatch(negative));
         }
 
         /// <summary>
@@ -76,42 +78,44 @@ namespace GitignoreParserNet
             if (!input.StartsWith("/"))
                 input = "/" + input;
 
-            var acceptRe = Negatives.Item1;
-            var acceptTest = acceptRe.IsMatch(input);
-            var denyRe = Positives.Item1;
-            var denyTest = denyRe.IsMatch(input);
+            var acceptTest = Negatives.Merged.IsMatch(input);
+            var denyTest = Positives.Merged.IsMatch(input);
             var returnVal = acceptTest || !denyTest;
+
             // See the test/fixtures/gitignore.manpage.txt near line 680 (grep for "uber-nasty"):
             // to resolve chained rules which reject, then accept, we need to establish
             // the precedence of both accept and reject parts of the compiled gitignore by
             // comparing match lengths.
             // Since the generated consolidated regexes are lazy, we must loop through all lines' regexes instead:
+#if DEBUG
             Match? acceptMatch = null, denyMatch = null;
+#endif
             if (acceptTest && denyTest)
             {
-                foreach (var re in Negatives.Item2)
+                int acceptLength = 0, denyLength = 0;
+                foreach (var re in Negatives.Individual)
                 {
                     var m = re.Match(input);
-                    if (m.Success)
+                    if (m.Success && acceptLength < m.Value.Length)
                     {
-                        if (acceptMatch?.Success != true)
-                            acceptMatch = m;
-                        else if (acceptMatch.Groups[0].Value.Length < m.Value.Length)
-                            acceptMatch = m;
+#if DEBUG
+                        acceptMatch = m;
+#endif
+                        acceptLength = m.Value.Length;
                     }
                 }
-                foreach (var re in Positives.Item2)
+                foreach (var re in Positives.Individual)
                 {
                     var m = re.Match(input);
-                    if (m.Success)
+                    if (m.Success && denyLength < m.Value.Length)
                     {
-                        if (denyMatch?.Success != true)
-                            denyMatch = m;
-                        else if (denyMatch.Groups[0].Value.Length < m.Value.Length)
-                            denyMatch = m;
+#if DEBUG
+                        denyMatch = m;
+#endif
+                        denyLength = m.Value.Length;
                     }
                 }
-                returnVal = acceptMatch.Groups[0].Value.Length >= denyMatch.Groups[0].Value.Length;
+                returnVal = acceptLength >= denyLength;
             }
 #if DEBUG
             if (expected != null && expected != returnVal)
@@ -120,10 +124,10 @@ namespace GitignoreParserNet
                     "accepts",
                     input,
                     (bool)expected,
-                    acceptRe,
+                    Negatives.Merged,
                     acceptTest,
                     acceptMatch,
-                    denyRe,
+                    Positives.Merged,
                     denyTest,
                     denyMatch,
                     "(Accept || !Deny)",
@@ -157,10 +161,8 @@ namespace GitignoreParserNet
             if (!input.StartsWith("/"))
                 input = "/" + input;
 
-            var acceptRe = Negatives.Item1;
-            var acceptTest = acceptRe.IsMatch(input);
-            var denyRe = Positives.Item1;
-            var denyTest = denyRe.IsMatch(input);
+            var acceptTest = Negatives.Merged.IsMatch(input);
+            var denyTest = Positives.Merged.IsMatch(input);
             // boolean logic:
             //
             // Denies = !Accepts =>
@@ -168,39 +170,42 @@ namespace GitignoreParserNet
             // Denies = (!Accept && !!Deny) =>
             // Denies = (!Accept && Deny)
             var returnVal = !acceptTest && denyTest;
+
             // See the test/fixtures/gitignore.manpage.txt near line 680 (grep for "uber-nasty"):
             // to resolve chained rules which reject, then accept, we need to establish
             // the precedence of both accept and reject parts of the compiled gitignore by
             // comparing match lengths.
             // Since the generated regexes are all set up to be GREEDY, we can use the
             // consolidated regex for this, instead of having to loop through all lines' regexes:
+#if DEBUG
             Match? acceptMatch = null, denyMatch = null;
+#endif
             if (acceptTest && denyTest)
             {
-                foreach (var re in Negatives.Item2)
+                int acceptLength = 0, denyLength = 0;
+                foreach (var re in Negatives.Individual)
                 {
                     var m = re.Match(input);
-                    if (m.Success)
+                    if (m.Success && acceptLength < m.Value.Length)
                     {
-                        if (acceptMatch?.Success != true)
-                            acceptMatch = m;
-                        else if (acceptMatch.Groups[0].Value.Length < m.Value.Length)
-                            acceptMatch = m;
+#if DEBUG
+                        acceptMatch = m;
+#endif
+                        acceptLength = m.Value.Length;
                     }
                 }
-                foreach (var re in Positives.Item2)
+                foreach (var re in Positives.Individual)
                 {
                     var m = re.Match(input);
-                    if (m.Success)
+                    if (m.Success && denyLength < m.Value.Length)
                     {
-                        if (denyMatch?.Success != true)
-                            denyMatch = m;
-                        else if (denyMatch.Groups[0].Value.Length < m.Value.Length)
-                            denyMatch = m;
+#if DEBUG
+                        denyMatch = m;
+#endif
+                        denyLength = m.Value.Length;
                     }
                 }
-                // boolean logic: !(A>=B) => A<B
-                returnVal = acceptMatch.Groups[0].Value.Length < denyMatch.Groups[0].Value.Length;
+                returnVal = acceptLength < denyLength;
             }
 #if DEBUG
             if (expected != null && expected != returnVal)
@@ -209,10 +214,10 @@ namespace GitignoreParserNet
                     "denies",
                     input,
                     (bool)expected,
-                    acceptRe,
+                    Negatives.Merged,
                     acceptTest,
                     acceptMatch,
-                    denyRe,
+                    Positives.Merged,
                     denyTest,
                     denyMatch,
                     "(!Accept && Deny)",
@@ -254,10 +259,8 @@ namespace GitignoreParserNet
             if (!input.StartsWith("/"))
                 input = "/" + input;
 
-            var acceptRe = Negatives.Item1;
-            var acceptTest = acceptRe.IsMatch(input);
-            var denyRe = Positives.Item1;
-            var denyTest = denyRe.IsMatch(input);
+            var acceptTest = Negatives.Merged.IsMatch(input);
+            var denyTest = Positives.Merged.IsMatch(input);
             // when any filter 'touches' the input path, it must match,
             // no matter whether it's a deny or accept filter line:
             var returnVal = acceptTest || denyTest;
@@ -268,10 +271,10 @@ namespace GitignoreParserNet
                     "inspects",
                     input,
                     (bool)expected,
-                    acceptRe,
+                    Negatives.Merged,
                     acceptTest,
                     null,
-                    denyRe,
+                    Positives.Merged,
                     denyTest,
                     null,
                     "(Accept || Deny)",
@@ -282,8 +285,7 @@ namespace GitignoreParserNet
             return returnVal;
         }
 
-        private static readonly Regex RangeRegex = new Regex(@"^((?:[^\[\\]|(?:\\.))*)\[((?:[^\]\\]|(?:\\.))*)\]");
-
+        [SuppressMessage("Major Code Smell", "S1121:Assignments should not be made from within sub-expressions")]
         private static string PrepareRegexPattern(string pattern)
         {
             // https://git-scm.com/docs/gitignore#_pattern_format
@@ -304,7 +306,7 @@ namespace GitignoreParserNet
 #if DEBUG
             string input = pattern;
 #endif
-            string re = "";
+            var reBuilder = new StringBuilder();
             bool rooted = false, directory = false;
             if (pattern.StartsWith("/"))
             {
@@ -319,25 +321,26 @@ namespace GitignoreParserNet
 
             string transpileRegexPart(string _re)
             {
+                if (_re.Length == 0) return _re;
                 // unescape for these will be escaped again in the subsequent `.Replace(...)`,
                 // whether they were escaped before or not:
-                _re = Regex.Replace(_re, @"\\(.)", "$1");
+                _re = BackslashRegex.Replace(_re, "$1");
                 // escape special regex characters:
-                _re = Regex.Replace(_re, @"[\-\[\]\{\}\(\)\+\.\\\^\$\|]", @"\$&");
-                _re = Regex.Replace(_re, @"\?", "[^/]");
-                _re = Regex.Replace(_re, @"\/\*\*\/", "(?:/|(?:/.+/))");
-                _re = Regex.Replace(_re, @"^\*\*\/", "(?:|(?:.+/))");
-                _re = Regex.Replace(_re, @"\/\*\*$", _ =>
+                _re = SpecialCharactersRegex.Replace(_re, @"\$&");
+                _re = QuestionMarkRegex.Replace(_re, "[^/]");
+                _re = SlashDoubleAsteriksSlashRegex.Replace(_re, "(?:/|(?:/.+/))");
+                _re = DoubleAsteriksSlashRegex.Replace(_re, "(?:|(?:.+/))");
+                _re = SlashDoubleAsteriksRegex.Replace(_re, _ =>
                 {
                     directory = true;       // `a/**` should match `a/`, `a/b/` and `a/b`, the latter by implication of matching directory `a/`
                     return "(?:|(?:/.+))";  // `a/**` also accepts `a/` itself
                 });
-                _re = Regex.Replace(_re, @"\*\*", ".*");
+                _re = DoubleAsteriksRegex.Replace(_re, ".*");
                 // `a/*` should match `a/b` and `a/b/` but NOT `a` or `a/`
                 // meanwhile, `a/*/` should match `a/b/` and `a/b/c` but NOT `a` or `a/` or `a/b`
-                _re = Regex.Replace(_re, @"\/\*(\/|$)", "/[^/]+$1");
-                _re = Regex.Replace(_re, @"\*", "[^/]*");
-                _re = Regex.Replace(_re, @"\/", @"\/");
+                _re = SlashAsteriksEndOrSlashRegex.Replace(_re, "/[^/]+$1");
+                _re = AsteriksRegex.Replace(_re, "[^/]*");
+                _re = SlashRegex.Replace(_re, @"\/");
                 return _re;
             }
 
@@ -347,7 +350,7 @@ namespace GitignoreParserNet
             //   the matcher below then...
             for (Match match; (match = rangeRe.Match(pattern)).Success;)
             {
-                if (match.Groups[1].Value.Contains("/"))
+                if (match.Groups[1].Value.Contains('/'))
                 {
                     rooted = true;
                     // ^ cf. man page:
@@ -357,14 +360,14 @@ namespace GitignoreParserNet
                     //   level of the particular .gitignore file itself. Otherwise
                     //   the pattern may also match at any level below the .gitignore level.
                 }
-                re += transpileRegexPart(match.Groups[1].Value);
-                re += '[' + match.Groups[2].Value + ']';
+                reBuilder.Append(transpileRegexPart(match.Groups[1].Value));
+                reBuilder.Append('[').Append(match.Groups[2].Value).Append(']');
 
                 pattern = pattern.Substring(match.Length);
             }
             if (!string.IsNullOrWhiteSpace(pattern))
             {
-                if (pattern.Contains("/"))
+                if (pattern.Contains('/'))
                 {
                     rooted = true;
                     // ^ cf. man page:
@@ -374,11 +377,11 @@ namespace GitignoreParserNet
                     //   level of the particular .gitignore file itself. Otherwise
                     //   the pattern may also match at any level below the .gitignore level.
                 }
-                re += transpileRegexPart(pattern);
+                reBuilder.Append(transpileRegexPart(pattern));
             }
 
             // prep regexes assuming we'll always prefix the check string with a '/':
-            re = (rooted ? @"^\/" : @"\/") + re;
+            reBuilder.Preappend(rooted ? @"^\/" : @"\/");
             // cf spec:
             //
             //   If there is a separator at the end of the pattern then the pattern
@@ -386,10 +389,13 @@ namespace GitignoreParserNet
             //   **both files and directories**.                   (emphasis mine)
             // if `directory`: match the directory itself and anything within
             // otherwise: match the file itself, or, when it is a directory, match the directory and anything within
-            re += (directory ? @"\/" : @"(?:$|\/)");
+            reBuilder.Append(directory ? @"\/" : @"(?:$|\/)");
 
             // regex validation diagnostics: better to check if the part is valid
             // then to discover it's gone haywire in the big conglomerate at the end.
+
+            string re = reBuilder.ToString();
+
 #if DEBUG
             try
             {
@@ -402,6 +408,7 @@ namespace GitignoreParserNet
                 Console.WriteLine("Failed regex: \n\tinput: {0}\n\tregex: {1}\n\texception: {2}", input, re, ex);
             }
 #endif
+
             return re;
         }
 
