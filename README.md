@@ -4,9 +4,9 @@ A simple yet *complete* [`.gitignore`](https://git-scm.com/docs/gitignore#_patte
 
 ## Installation
 
-You can find the Nuget Pachage [here](https://www.nuget.org/packages/GitignoreParserNet/0.2.0.9), or just:
+You can find the Nuget Pachage [here](https://www.nuget.org/packages/GitignoreParserNet/0.2.0.10), or just:
 
-`Install-Package GitignoreParserNet -Version 0.2.0.9`
+`Install-Package GitignoreParserNet -Version 0.2.0.10`
 
 ## Features
 
