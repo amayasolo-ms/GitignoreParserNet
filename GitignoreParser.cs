@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace GitignoreParserNet
@@ -13,14 +14,12 @@ namespace GitignoreParserNet
 
         public GitignoreParser(string content)
         {
-            var parsed = Parse(content);
-            Positives = parsed.positives;
-            Negatives = parsed.negatives;
+            (Positives, Negatives) = Parse(content);
         }
 
         public static ((Regex, Regex[]) positives, (Regex, Regex[]) negatives) Parse(string content)
         {
-            (List<string> positive, List<string> negative) parsed = content
+            (List<string> positive, List<string> negative) = content
                 .Split(new string[] { "\r\n", "\r", "\n" }, StringSplitOptions.None)
                 .Select(line => line.Trim())
                 .Where(line => !string.IsNullOrWhiteSpace(line) && !line.StartsWith("#"))
@@ -38,7 +37,7 @@ namespace GitignoreParserNet
                 );
             (Regex, Regex[]) submatch(List<string> list)
             {
-                if (list.Count() == 0)
+                if (list.Count == 0)
                 {
                     return (new Regex("$^"), new Regex[0]);
                 }
@@ -51,17 +50,20 @@ namespace GitignoreParserNet
                     );
                 }
             }
-            return (submatch(parsed.positive), submatch(parsed.negative));
+            return (submatch(positive), submatch(negative));
         }
 
-        /// Return TRUE when the given `input` path PASSES the gitignore filters,
-        /// i.e. when the given input path is DENIED.
-        ///
+        /// <summary>
         /// Notes:
         /// - you MUST postfix a input directory with '/' to ensure the gitignore
         ///   rules can be applied conform spec.
         /// - you MAY prefix a input directory with '/' when that directory is
         ///   'rooted' in the same directory as the compiled .gitignore spec file.
+        /// </summary>
+        /// <returns>
+        /// TRUE when the given `input` path PASSES the gitignore filters,
+        /// i.e. when the given input path is DENIED.
+        /// </returns>
 #if DEBUG
         public bool Accepts(string input, bool? expected = null)
 #else
@@ -84,7 +86,7 @@ namespace GitignoreParserNet
             // the precedence of both accept and reject parts of the compiled gitignore by
             // comparing match lengths.
             // Since the generated consolidated regexes are lazy, we must loop through all lines' regexes instead:
-            Match acceptMatch = null, denyMatch = null;
+            Match? acceptMatch = null, denyMatch = null;
             if (acceptTest && denyTest)
             {
                 foreach (var re in Negatives.Item2)
@@ -109,12 +111,11 @@ namespace GitignoreParserNet
                             denyMatch = m;
                     }
                 }
-                // acceptMatch = acceptRe.Match(input);
-                // denyMatch = denyRe.Match(input);
                 returnVal = acceptMatch.Groups[0].Value.Length >= denyMatch.Groups[0].Value.Length;
             }
 #if DEBUG
             if (expected != null && expected != returnVal)
+            {
                 Diagnose(
                     "accepts",
                     input,
@@ -128,18 +129,22 @@ namespace GitignoreParserNet
                     "(Accept || !Deny)",
                     returnVal
                 );
+            }
 #endif
             return returnVal;
         }
 
-        /// Return TRUE when the given `input` path FAILS the gitignore filters,
-        /// i.e. when the given input path is ACCEPTED.
-        ///
+        /// <summary>
         /// Notes:
         /// - you MUST postfix a input directory with '/' to ensure the gitignore
         ///   rules can be applied conform spec.
         /// - you MAY prefix a input directory with '/' when that directory is
         ///   'rooted' in the same directory as the compiled .gitignore spec file.
+        /// </summary>
+        /// <returns>
+        /// TRUE when the given `input` path FAILS the gitignore filters,
+        /// i.e. when the given input path is ACCEPTED.
+        /// </returns>
 #if DEBUG
         public bool Denies(string input, bool? expected = null)
 #else
@@ -169,7 +174,7 @@ namespace GitignoreParserNet
             // comparing match lengths.
             // Since the generated regexes are all set up to be GREEDY, we can use the
             // consolidated regex for this, instead of having to loop through all lines' regexes:
-            Match acceptMatch = null, denyMatch = null;
+            Match? acceptMatch = null, denyMatch = null;
             if (acceptTest && denyTest)
             {
                 foreach (var re in Negatives.Item2)
@@ -194,13 +199,12 @@ namespace GitignoreParserNet
                             denyMatch = m;
                     }
                 }
-                // acceptMatch = acceptRe.Match(input);
-                // denyMatch = denyRe.Match(input);
                 // boolean logic: !(A>=B) => A<B
                 returnVal = acceptMatch.Groups[0].Value.Length < denyMatch.Groups[0].Value.Length;
             }
 #if DEBUG
             if (expected != null && expected != returnVal)
+            {
                 Diagnose(
                     "denies",
                     input,
@@ -214,23 +218,30 @@ namespace GitignoreParserNet
                     "(!Accept && Deny)",
                     returnVal
                 );
+            }
 #endif
             return returnVal;
         }
 
-        /// Return TRUE when the given `input` path is inspected by any .gitignore
-        /// filter line.
-        ///
+        /// <summary>
+        /// <para>
         /// You can use this method to help construct the decision path when you
         /// process nested .gitignore files: .gitignore filters in subdirectories
         /// MAY override parent .gitignore filters only when there's actually ANY
         /// filter in the child .gitignore after all.
-        ///
+        /// </para>
+        /// <para>
         /// Notes:
         /// - you MUST postfix a input directory with '/' to ensure the gitignore
         ///   rules can be applied conform spec.
         /// - you MAY prefix a input directory with '/' when that directory is
         ///   'rooted' in the same directory as the compiled .gitignore spec file.
+        /// </para>
+        /// </summary>
+        /// <returns>
+        /// TRUE when the given `input` path is inspected by any .gitignore
+        /// filter line.
+        /// </returns>
 #if DEBUG
         public bool Inspects(string input, bool? expected = null)
 #else
@@ -252,6 +263,7 @@ namespace GitignoreParserNet
             var returnVal = acceptTest || denyTest;
 #if DEBUG
             if (expected != null && expected != returnVal)
+            {
                 Diagnose(
                     "inspects",
                     input,
@@ -265,6 +277,7 @@ namespace GitignoreParserNet
                     "(Accept || Deny)",
                     returnVal
                 );
+            }
 #endif
             return returnVal;
         }
@@ -314,7 +327,7 @@ namespace GitignoreParserNet
                 _re = Regex.Replace(_re, @"\?", "[^/]");
                 _re = Regex.Replace(_re, @"\/\*\*\/", "(?:/|(?:/.+/))");
                 _re = Regex.Replace(_re, @"^\*\*\/", "(?:|(?:.+/))");
-                _re = Regex.Replace(_re, @"\/\*\*$", m =>
+                _re = Regex.Replace(_re, @"\/\*\*$", _ =>
                 {
                     directory = true;       // `a/**` should match `a/`, `a/b/` and `a/b`, the latter by implication of matching directory `a/`
                     return "(?:|(?:/.+))";  // `a/**` also accepts `a/` itself
@@ -380,11 +393,13 @@ namespace GitignoreParserNet
 #if DEBUG
             try
             {
-                new Regex($"(?:{re})");
+#pragma warning disable S1481 // Unused local variables should be removed
+                Regex regex = new Regex($"(?:{re})");
+#pragma warning restore S1481 // Unused local variables should be removed
             }
             catch (ArgumentException ex)
             {
-                Console.WriteLine("Failed regex:", input, re, ex);
+                Console.WriteLine("Failed regex: \n\tinput: {0}\n\tregex: {1}\n\texception: {2}", input, re, ex);
             }
 #endif
             return re;
@@ -398,10 +413,10 @@ namespace GitignoreParserNet
             public bool Expected { get; set; }
             public Regex AcceptRe { get; set; }
             public bool AcceptTest { get; set; }
-            public Match AcceptMatch { get; set; }
+            public Match? AcceptMatch { get; set; }
             public Regex DenyRe { get; set; }
             public bool DenyTest { get; set; }
-            public Match DenyMatch { get; set; }
+            public Match? DenyMatch { get; set; }
             public string Combine { get; set; }
             public bool ReturnVal { get; set; }
 
@@ -411,10 +426,10 @@ namespace GitignoreParserNet
                 bool expected,
                 Regex acceptRe,
                 bool acceptTest,
-                Match acceptMatch,
+                Match? acceptMatch,
                 Regex denyRe,
                 bool denyTest,
-                Match denyMatch,
+                Match? denyMatch,
                 string combine,
                 bool returnVal)
             {
@@ -432,21 +447,23 @@ namespace GitignoreParserNet
             }
         }
         public delegate void OnFailEventHandler(object sender, OnFailEventArgs e);
-        public event OnFailEventHandler OnFail;
+        public event EventHandler<OnFailEventArgs>? OnFail;
 
+        /// <summary>
         /// Helper invoked when any `Accepts()`, `Denies()` or `Inspects()`
         /// fail to help the developer analyze what is going on inside:
         /// some gitignore spec bits are non-intuitive / non-trivial, after all.
+        /// </summary>
         private void Diagnose(
             string query,
             string input,
             bool expected,
             Regex acceptRe,
             bool acceptTest,
-            Match acceptMatch,
+            Match? acceptMatch,
             Regex denyRe,
             bool denyTest,
-            Match denyMatch,
+            Match? denyMatch,
             string combine,
             bool returnVal
             )
@@ -469,19 +486,22 @@ namespace GitignoreParserNet
                         ));
                 return;
             }
-            Console.WriteLine($"'{query}': {{");
-            Console.WriteLine($"\tquery: '{query}',");
-            Console.WriteLine($"\tinput: '{input}',");
-            Console.WriteLine($"\texpected: '{expected}',");
-            Console.WriteLine($"\tacceptRe: '{acceptRe}',");
-            Console.WriteLine($"\tacceptTest: '{acceptTest}',");
-            Console.WriteLine($"\tacceptMatch: '{acceptMatch}',");
-            Console.WriteLine($"\tdenyRe: '{denyRe}',");
-            Console.WriteLine($"\tdenyTest: '{denyTest}',");
-            Console.WriteLine($"\tdenyMatch: '{denyMatch}',");
-            Console.WriteLine($"\tcombine: '{combine}',");
-            Console.WriteLine($"\treturnVal: '{returnVal}'");
-            Console.WriteLine("}");
+            var log = new StringBuilder()
+                .Append('\'').Append(query).AppendLine("': {")
+                .Append("\tquery: '").Append(query).AppendLine("',")
+                .Append("\tinput: '").Append(input).AppendLine("',")
+                .Append("\texpected: '").Append(expected).AppendLine("',")
+                .Append("\tacceptRe: '").Append(acceptRe).AppendLine("',")
+                .Append("\tacceptTest: '").Append(acceptTest).AppendLine("',")
+                .Append("\tacceptMatch: '").Append(acceptMatch).AppendLine("',")
+                .Append("\tdenyRe: '").Append(denyRe).AppendLine("',")
+                .Append("\tdenyTest: '").Append(denyTest).AppendLine("',")
+                .Append("\tdenyMatch: '").Append(denyMatch).AppendLine("',")
+                .Append("\tcombine: '").Append(combine).AppendLine("',")
+                .Append("\treturnVal: '").Append(returnVal).AppendLine("'")
+                .AppendLine("}")
+                .ToString();
+            Console.WriteLine(log);
         }
 #endif
     }
