@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -16,6 +17,12 @@ namespace GitignoreParserNet
 
         public GitignoreParser(string content)
         {
+            (Positives, Negatives) = Parse(content);
+        }
+
+        public GitignoreParser(string path, bool ignoreGitDirectory)
+        {
+            string content = File.ReadAllText(path, Encoding.UTF8) + (ignoreGitDirectory ? (Environment.NewLine + ".git/") : "");
             (Positives, Negatives) = Parse(content);
         }
 
@@ -53,6 +60,39 @@ namespace GitignoreParserNet
                 }
             }
             return (Submatch(positive), Submatch(negative));
+        }
+
+        public static (IEnumerable<string> Accepted, IEnumerable<string> Denied) Parse(string gitignorePath, bool ignoreGitDirectory)
+        {
+            GitignoreParser parser = new(gitignorePath, ignoreGitDirectory);
+            FileInfo gitignore = new(gitignorePath);
+            DirectoryInfo directory = gitignore.Directory;
+            return (parser.Accepted(directory), parser.Denied(directory));
+        }
+
+        public static (IEnumerable<string> Accepted, IEnumerable<string> Denied) Parse(string gitignorePath, string directoryPath, bool ignoreGitDirectory)
+        {
+            GitignoreParser parser = new(gitignorePath, ignoreGitDirectory);
+            DirectoryInfo directory = new(directoryPath);
+            return (parser.Accepted(directory), parser.Denied(directory));
+        }
+
+        static List<string> ListFiles(DirectoryInfo directory, string rootPath = "")
+        {
+            if (rootPath.Length == 0)
+                rootPath = directory.FullName;
+
+            List<string> files = new()
+            {
+                directory.FullName.Substring(rootPath.Length) + '/'
+            };
+            foreach (FileInfo file in directory.GetFiles())
+                files.Add(file.FullName.Substring(rootPath.Length + 1));
+
+            foreach (DirectoryInfo subDir in directory.GetDirectories())
+                files.AddRange(ListFiles(subDir, rootPath));
+
+            return files;
         }
 
         /// <summary>
@@ -136,6 +176,17 @@ namespace GitignoreParserNet
             }
 #endif
             return returnVal;
+        }
+
+        public IEnumerable<string> Accepted(IEnumerable<string> input)
+        {
+            return input.Where(f => Accepts(f));
+        }
+
+        public IEnumerable<string> Accepted(DirectoryInfo directory)
+        {
+            var files = ListFiles(directory);
+            return files.Where(f => Accepts(f));
         }
 
         /// <summary>
@@ -226,6 +277,17 @@ namespace GitignoreParserNet
             }
 #endif
             return returnVal;
+        }
+
+        public IEnumerable<string> Denied(IEnumerable<string> input)
+        {
+            return input.Where(f => Denies(f));
+        }
+
+        public IEnumerable<string> Denied(DirectoryInfo directory)
+        {
+            var files = ListFiles(directory);
+            return files.Where(f => Denies(f));
         }
 
         /// <summary>
