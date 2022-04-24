@@ -43,32 +43,12 @@ Supports all features listed in the [GIT SCM gitignore manpage](https://git-scm.
 ## Usage
 
 ```cs
-static List<string> ListFileNames(string directoryPath)
-{
-    DirectoryInfo dir = new DirectoryInfo(directoryPath);
-
-    List<string> files = new List<string>
-    {
-        dir.FullName + '/'
-    };
-    foreach (FileInfo file in dir.GetFiles())
-        files.Add(file.FullName);
-
-    foreach (DirectoryInfo subDir in dir.GetDirectories())
-        files.AddRange(ListFileNames(subDir.FullName));
-
-    return files;
-}
-
 static void Main(string[] args)
 {
-    const string projPath = @"C:\path\to\dir";
-    var files = ListFileNames(projPath);
+    const string gitignorePath = @"D:\path\to\.gitignore";
 
-    string gitignore = File.ReadAllText(Path.Combine(projPath, ".gitignore"), Encoding.UTF8);
-    var parser = new GitignoreParser(gitignore);
+    var (accepted, denied) = GitignoreParser.Parse(gitignorePath: gitignorePath, ignoreGitDirectory: true);
 
-    var accepted = files.Where(file => parser.Accepts(file));
     foreach (string file in accepted)
         Console.WriteLine(file);
 }
