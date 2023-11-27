@@ -11,9 +11,9 @@
     <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
     <PackageProjectUrl>https://github.com/Guiorgy/GitignoreParserNet</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Guiorgy/GitignoreParserNet</RepositoryUrl>
-    <Version>0.2.0.10</Version>
-    <AssemblyVersion>0.2.0.10</AssemblyVersion>
-    <FileVersion>0.2.0.10</FileVersion>
+    <Version>0.2.0.11</Version>
+    <AssemblyVersion>$(Version)</AssemblyVersion>
+    <FileVersion>$(Version)</FileVersion>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Copyright>Guiorgy</Copyright>

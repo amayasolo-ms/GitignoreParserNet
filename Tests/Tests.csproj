@@ -5,8 +5,8 @@
     <LangVersion>12</LangVersion>
     <IsPackable>false</IsPackable>
     <Authors>Guiorgy</Authors>
-    <Copyright>Guiorgy</Copyright>
-    <Version>0.2.0.9</Version>
+    <Copyright>$(Authors)</Copyright>
+    <Version>0.2.0.11</Version>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
