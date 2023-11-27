@@ -1,7 +1,6 @@
 ﻿using GitignoreParserNet;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Diagnostics.CodeAnalysis;
-using System.IO;
 using System.Text;
 
 namespace Tests.TestGithubIssues
@@ -38,7 +37,7 @@ namespace Tests.TestGithubIssues
         [TestMethod("should only accept a/2/a")]
         public void OnlyAcceptA2A()
         {
-            var gitignore = new GitignoreParser(File.ReadAllText(@"..\..\..\a\.gitignore-fixture", Encoding.UTF8));
+            var gitignore = new GitignoreParser(@"..\..\..\a\.gitignore-fixture", Encoding.UTF8);
             TestHelper.gitignoreAccepts(gitignore, "a/2/a", true);
             TestHelper.gitignoreAccepts(gitignore, "a/3/a", false);
         }

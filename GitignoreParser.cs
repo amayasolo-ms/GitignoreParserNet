@@ -20,6 +20,11 @@ namespace GitignoreParserNet
             (Positives, Negatives) = Parse(content, compileRegex);
         }
 
+        public GitignoreParser(string gitignorePath, Encoding fileEncoding, bool compileRegex = false)
+        {
+            (Positives, Negatives) = Parse(File.ReadAllText(gitignorePath, fileEncoding), compileRegex);
+        }
+
         public static ((Regex Merged, Regex[] Individual) positives, (Regex Merged, Regex[] Individual) negatives) Parse(string content, bool compileRegex = false)
         {
             var regexOptions = compileRegex ? RegexOptions.Compiled : RegexOptions.None;
@@ -60,18 +65,14 @@ namespace GitignoreParserNet
             return (Submatch(positive, regexOptions), Submatch(negative, regexOptions));
         }
 
-        public static (IEnumerable<string> Accepted, IEnumerable<string> Denied) Parse(string gitignorePath)
+        public static (IEnumerable<string> Accepted, IEnumerable<string> Denied) Parse(string gitignorePath, Encoding fileEncoding, string? directoryPath = null)
         {
-            GitignoreParser parser = new(gitignorePath, false);
-            FileInfo gitignore = new(gitignorePath);
-            DirectoryInfo directory = gitignore.Directory ?? throw new DirectoryNotFoundException($"Couldn't find the parent dirrectory for \"{gitignorePath}\"");
-            return (parser.Accepted(directory), parser.Denied(directory));
-        }
+            GitignoreParser parser = new(gitignorePath, fileEncoding, false);
 
-        public static (IEnumerable<string> Accepted, IEnumerable<string> Denied) Parse(string gitignorePath, string directoryPath)
-        {
-            GitignoreParser parser = new(gitignorePath, false);
-            DirectoryInfo directory = new(directoryPath);
+            DirectoryInfo directory = directoryPath != null
+                ? new(directoryPath)
+                : (new FileInfo(gitignorePath).Directory ?? throw new DirectoryNotFoundException($"Couldn't find the parent dirrectory for \"{gitignorePath}\""));
+
             return (parser.Accepted(directory), parser.Denied(directory));
         }
 
