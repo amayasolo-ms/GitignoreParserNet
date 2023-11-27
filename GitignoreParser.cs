@@ -66,7 +66,7 @@ namespace GitignoreParserNet
         {
             GitignoreParser parser = new(gitignorePath, ignoreGitDirectory);
             FileInfo gitignore = new(gitignorePath);
-            DirectoryInfo directory = gitignore.Directory;
+            DirectoryInfo directory = gitignore.Directory ?? throw new DirectoryNotFoundException($"Couldn't find the parent dirrectory for \"{gitignorePath}\"");
             return (parser.Accepted(directory), parser.Denied(directory));
         }
 
