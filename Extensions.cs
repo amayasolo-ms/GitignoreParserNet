@@ -345,5 +345,33 @@ namespace GitignoreParserNet
         {
             return builder.Insert(0, value);
         }
+
+#if !NETSTANDARD2_1_OR_GREATER && !NETCOREAPP2_0_OR_GREATER
+        //
+        // Summary:
+        //     Determines whether the beginning of this string instance matches the specified
+        //     character.
+        //
+        // Parameters:
+        //   value:
+        //     The character to compare.
+        //
+        // Returns:
+        //     true if value matches the beginning of this string; otherwise, false.
+        internal static bool StartsWith(this string @string, char value) => @string.Length >= 1 && @string[0] == value;
+
+        //
+        // Summary:
+        //     Determines whether the end of this string instance matches the specified character.
+        //
+        //
+        // Parameters:
+        //   value:
+        //     The character to compare to the substring at the end of this instance.
+        //
+        // Returns:
+        //     true if value matches the end of this instance; otherwise, false.
+        internal static bool EndsWith(this string @string, char value) => @string.Length >= 1 && @string[@string.Length - 1] == value;
+#endif
     }
 }

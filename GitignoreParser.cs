@@ -31,12 +31,12 @@ namespace GitignoreParserNet
             (List<string> positive, List<string> negative) = content
                 .Split(new string[] { "\r\n", "\r", "\n" }, StringSplitOptions.None)
                 .Select(line => line.Trim())
-                .Where(line => !string.IsNullOrWhiteSpace(line) && !line.StartsWith("#"))
+                .Where(line => !string.IsNullOrWhiteSpace(line) && !line.StartsWith('#'))
                 .Aggregate<string, (List<string>, List<string>), (List<string>, List<string>)>(
                     (new List<string>(), new List<string>()),
                     ((List<string> positive, List<string> negative) lists, string line) =>
                     {
-                        if (line.StartsWith("!"))
+                        if (line.StartsWith('!'))
                             lists.negative.Add(line.Substring(1));
                         else
                             lists.positive.Add(line);
@@ -114,7 +114,7 @@ namespace GitignoreParserNet
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 input = input.Replace('\\', '/');
 
-            if (!input.StartsWith("/"))
+            if (!input.StartsWith('/'))
                 input = "/" + input;
 
             var acceptTest = Negatives.Merged.IsMatch(input);
@@ -208,7 +208,7 @@ namespace GitignoreParserNet
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 input = input.Replace('\\', '/');
 
-            if (!input.StartsWith("/"))
+            if (!input.StartsWith('/'))
                 input = "/" + input;
 
             var acceptTest = Negatives.Merged.IsMatch(input);
@@ -317,7 +317,7 @@ namespace GitignoreParserNet
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 input = input.Replace('\\', '/');
 
-            if (!input.StartsWith("/"))
+            if (!input.StartsWith('/'))
                 input = "/" + input;
 
             var acceptTest = Negatives.Merged.IsMatch(input);
@@ -369,12 +369,12 @@ namespace GitignoreParserNet
 #endif
             var reBuilder = new StringBuilder();
             bool rooted = false, directory = false;
-            if (pattern.StartsWith("/"))
+            if (pattern.StartsWith('/'))
             {
                 rooted = true;
                 pattern = pattern.Substring(1);
             }
-            if (pattern.EndsWith("/"))
+            if (pattern.EndsWith('/'))
             {
                 directory = true;
                 pattern = pattern.Substring(0, pattern.Length - 1);
