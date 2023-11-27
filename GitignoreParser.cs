@@ -65,6 +65,13 @@ namespace GitignoreParserNet
             return (Submatch(positive, regexOptions), Submatch(negative, regexOptions));
         }
 
+        public static (IEnumerable<string> Accepted, IEnumerable<string> Denied) Parse(string content, string directoryPath)
+        {
+            GitignoreParser parser = new(content, false);
+            DirectoryInfo directory = new(directoryPath);
+            return (parser.Accepted(directory), parser.Denied(directory));
+        }
+
         public static (IEnumerable<string> Accepted, IEnumerable<string> Denied) Parse(string gitignorePath, Encoding fileEncoding, string? directoryPath = null)
         {
             GitignoreParser parser = new(gitignorePath, fileEncoding, false);
