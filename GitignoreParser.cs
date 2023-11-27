@@ -15,19 +15,15 @@ namespace GitignoreParserNet
         private readonly (Regex Merged, Regex[] Individual) Positives;
         private readonly (Regex Merged, Regex[] Individual) Negatives;
 
-        public GitignoreParser(string content)
+        public GitignoreParser(string content, bool compileRegex = false)
         {
-            (Positives, Negatives) = Parse(content);
+            (Positives, Negatives) = Parse(content, compileRegex);
         }
 
-        public GitignoreParser(string path, bool ignoreGitDirectory)
+        public static ((Regex Merged, Regex[] Individual) positives, (Regex Merged, Regex[] Individual) negatives) Parse(string content, bool compileRegex = false)
         {
-            string content = File.ReadAllText(path, Encoding.UTF8) + (ignoreGitDirectory ? (Environment.NewLine + ".git/") : "");
-            (Positives, Negatives) = Parse(content);
-        }
+            var regexOptions = compileRegex ? RegexOptions.Compiled : RegexOptions.None;
 
-        public static ((Regex Merged, Regex[] Individual) positives, (Regex Merged, Regex[] Individual) negatives) Parse(string content)
-        {
             (List<string> positive, List<string> negative) = content
                 .Split(new string[] { "\r\n", "\r", "\n" }, StringSplitOptions.None)
                 .Select(line => line.Trim())
@@ -44,7 +40,8 @@ namespace GitignoreParserNet
                     },
                     ((List<string> positive, List<string> negative) lists) => lists
                 );
-            static (Regex Merged, Regex[] Individual) Submatch(List<string> list)
+
+            static (Regex Merged, Regex[] Individual) Submatch(List<string> list, RegexOptions regexOptions)
             {
                 if (list.Count == 0)
                 {
@@ -54,25 +51,26 @@ namespace GitignoreParserNet
                 {
                     var reList = list.OrderBy(str => str).Select(PrepareRegexPattern).ToList();
                     return (
-                        new Regex($"(?:{string.Join(")|(?:", reList)})"),
-                        reList.Select(s => new Regex(s)).ToArray()
+                        new Regex($"(?:{string.Join(")|(?:", reList)})", regexOptions),
+                        reList.Select(s => new Regex(s, regexOptions)).ToArray()
                     );
                 }
             }
-            return (Submatch(positive), Submatch(negative));
+
+            return (Submatch(positive, regexOptions), Submatch(negative, regexOptions));
         }
 
-        public static (IEnumerable<string> Accepted, IEnumerable<string> Denied) Parse(string gitignorePath, bool ignoreGitDirectory)
+        public static (IEnumerable<string> Accepted, IEnumerable<string> Denied) Parse(string gitignorePath)
         {
-            GitignoreParser parser = new(gitignorePath, ignoreGitDirectory);
+            GitignoreParser parser = new(gitignorePath, false);
             FileInfo gitignore = new(gitignorePath);
             DirectoryInfo directory = gitignore.Directory ?? throw new DirectoryNotFoundException($"Couldn't find the parent dirrectory for \"{gitignorePath}\"");
             return (parser.Accepted(directory), parser.Denied(directory));
         }
 
-        public static (IEnumerable<string> Accepted, IEnumerable<string> Denied) Parse(string gitignorePath, string directoryPath, bool ignoreGitDirectory)
+        public static (IEnumerable<string> Accepted, IEnumerable<string> Denied) Parse(string gitignorePath, string directoryPath)
         {
-            GitignoreParser parser = new(gitignorePath, ignoreGitDirectory);
+            GitignoreParser parser = new(gitignorePath, false);
             DirectoryInfo directory = new(directoryPath);
             return (parser.Accepted(directory), parser.Denied(directory));
         }
