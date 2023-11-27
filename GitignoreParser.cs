@@ -10,21 +10,46 @@ using static GitignoreParserNet.RegexPatterns;
 
 namespace GitignoreParserNet
 {
+    /// <summary>
+    /// A simple yet complete .gitignore parser for .NET
+    /// </summary>
+    /// <remarks>
+    /// This is a .NET port of the npm package gitignore-parser by Ger Hobbelt.
+    /// </remarks>
+    /// <seealso href="https://github.com/GerHobbelt/gitignore-parser"/>
+    /// <seealso href="https://github.com/GerHobbelt"/>
     public sealed class GitignoreParser
     {
         private readonly (Regex Merged, Regex[] Individual) Positives;
         private readonly (Regex Merged, Regex[] Individual) Negatives;
 
+        /// <summary>
+        /// Parses a string containing the gitignore rules.
+        /// </summary>
+        /// <param name="content">The string containing the gitignore rules.</param>
+        /// <param name="compileRegex">If <see langword="true"/>, the Regex objects will be compiled to improve consecutive uses.</param>
         public GitignoreParser(string content, bool compileRegex = false)
         {
             (Positives, Negatives) = Parse(content, compileRegex);
         }
 
+        /// <summary>
+        /// Parses a file containing the gitignore rules.
+        /// </summary>
+        /// <param name="gitignorePath">Path to the file containing the gitignore rules.</param>
+        /// <param name="fileEncoding">The encoding applied to the contents of the file.</param>
+        /// <param name="compileRegex">If <see langword="true"/>, the Regex objects will be compiled to improve consecutive uses.</param>
         public GitignoreParser(string gitignorePath, Encoding fileEncoding, bool compileRegex = false)
         {
             (Positives, Negatives) = Parse(File.ReadAllText(gitignorePath, fileEncoding), compileRegex);
         }
 
+        /// <summary>
+        /// Parses the given gitignore content and returns regex objects for matching positive and negativ filters.
+        /// </summary>
+        /// <param name="content">The string containing the gitignore rules.</param>
+        /// <param name="compileRegex">If <see langword="true"/>, the Regex objects will be compiled to improve consecutive uses.</param>
+        /// <returns><see cref="Regex"/> objects for positive and negative matching for the given gitignore rules.</returns>
         public static ((Regex Merged, Regex[] Individual) positives, (Regex Merged, Regex[] Individual) negatives) Parse(string content, bool compileRegex = false)
         {
             var regexOptions = compileRegex ? RegexOptions.Compiled : RegexOptions.None;
@@ -65,6 +90,12 @@ namespace GitignoreParserNet
             return (Submatch(positive, regexOptions), Submatch(negative, regexOptions));
         }
 
+        /// <summary>
+        /// Parses a gitignore file and filters the files/directories inside the given directory recursively.
+        /// </summary>
+        /// <param name="content">The string containing the gitignore rules.</param>
+        /// <param name="directoryPath">The directory path to the contents of which to apply the gitignore rules.</param>
+        /// <returns>Files and directories filtered with the given gitignore rules.</returns>
         public static (IEnumerable<string> Accepted, IEnumerable<string> Denied) Parse(string content, string directoryPath)
         {
             GitignoreParser parser = new(content, false);
@@ -72,6 +103,14 @@ namespace GitignoreParserNet
             return (parser.Accepted(directory), parser.Denied(directory));
         }
 
+        /// <summary>
+        /// Parses a gitignore file and filters the files/directories inside the given directory recursively.
+        /// If no directory is given, the parent directory of the gitignore file is taken.
+        /// </summary>
+        /// <param name="gitignorePath">Path to the gitignore file.</param>
+        /// <param name="fileEncoding">The encoding applied to the contents of the file.</param>
+        /// <returns>Files and directories filtered with the given gitignore rules.</returns>
+        /// <exception cref="DirectoryNotFoundException">Couldn't find the parent dirrectory for <paramref name="gitignorePath"/>.</exception>
         public static (IEnumerable<string> Accepted, IEnumerable<string> Denied) Parse(string gitignorePath, Encoding fileEncoding, string? directoryPath = null)
         {
             GitignoreParser parser = new(gitignorePath, fileEncoding, false);
@@ -83,6 +122,11 @@ namespace GitignoreParserNet
             return (parser.Accepted(directory), parser.Denied(directory));
         }
 
+        /// <summary>
+        /// Returns a list of relative paths of all subdirectories and files under the given directory (including the given directory itself).
+        /// </summary>
+        /// <param name="directory">The directory to traverse.</param>
+        /// <returns>The list of relative paths of subdirectories and files.</returns>
         private static List<string> ListFiles(DirectoryInfo directory)
         {
             static List<string> AaddFiles(List<string> files, DirectoryInfo directory, string rootPath)
@@ -104,16 +148,30 @@ namespace GitignoreParserNet
         }
 
         /// <summary>
-        /// Notes:
-        /// - you MUST postfix a input directory with '/' to ensure the gitignore
-        ///   rules can be applied conform spec.
-        /// - you MAY prefix a input directory with '/' when that directory is
-        ///   'rooted' in the same directory as the compiled .gitignore spec file.
+        /// Tests whether the given file/directory passes the gitignore filters.
         /// </summary>
+        /// <param name="input">The file/directory path to test.</param>
+        /// <param name="expected">If not <see langword="null"/>, when the result of the method doesn't match the expected, print</param>
         /// <returns>
-        /// TRUE when the given `input` path PASSES the gitignore filters,
-        /// i.e. when the given input path is DENIED.
+        /// <see langword="true"/> when the given `input` path <strong>passes</strong> the gitignore filters,
+        /// i.e. when the given input path is <strong>denied</strong> (<i>ignored</i>).
         /// </returns>
+        /// <remarks>
+        /// <list type="bullet">
+        /// <item>
+        /// <description>
+        /// You <strong>must</strong> postfix a input directory with a slash
+        /// ('/') to ensure the gitignore rules can be applied conform spec.
+        /// </description>
+        /// </item>
+        /// <item>
+        /// <description>
+        /// You <strong>may</strong> prefix a input directory with a slash ('/')
+        /// when that directory is 'rooted' in the search directory.
+        /// </description>
+        /// </item>
+        /// </list>
+        /// </remarks>
 #if DEBUG
         public bool Accepts(string input, bool? expected = null)
 #else
@@ -186,11 +244,59 @@ namespace GitignoreParserNet
             return returnVal;
         }
 
-        public IEnumerable<string> Accepted(IEnumerable<string> input)
+        /// <summary>
+        /// Tests whether the given files/directories pass the gitignore filters.
+        /// </summary>
+        /// <param name="inputs">The file/directory paths to test.</param>
+        /// <returns>
+        /// <see cref="IEnumerable{string}"/> with the paths that <strong>pass</strong> the gitignore filters,
+        /// i.e. the paths that are <strong>denied</strong> (<i>ignored</i>).
+        /// </returns>
+        /// <remarks>
+        /// <list type="bullet">
+        /// <item>
+        /// <description>
+        /// You <strong>must</strong> postfix a input directory with a slash
+        /// ('/') to ensure the gitignore rules can be applied conform spec.
+        /// </description>
+        /// </item>
+        /// <item>
+        /// <description>
+        /// You <strong>may</strong> prefix a input directory with a slash ('/')
+        /// when that directory is 'rooted' in the search directory.
+        /// </description>
+        /// </item>
+        /// </list>
+        /// </remarks>
+        public IEnumerable<string> Accepted(IEnumerable<string> inputs)
         {
-            return input.Where(f => Accepts(f));
+            return inputs.Where(f => Accepts(f));
         }
 
+        /// <summary>
+        /// Tests whether the given files/directories pass the gitignore filters.
+        /// </summary>
+        /// <param name="directory">The directory to test.</param>
+        /// <returns>
+        /// <see cref="IEnumerable{string}"/> with the paths that <strong>pass</strong> the gitignore filters,
+        /// i.e. the paths that are <strong>denied</strong> (<i>ignored</i>).
+        /// </returns>
+        /// <remarks>
+        /// <list type="bullet">
+        /// <item>
+        /// <description>
+        /// You <strong>must</strong> postfix a input directory with a slash
+        /// ('/') to ensure the gitignore rules can be applied conform spec.
+        /// </description>
+        /// </item>
+        /// <item>
+        /// <description>
+        /// You <strong>may</strong> prefix a input directory with a slash ('/')
+        /// when that directory is 'rooted' in the search directory.
+        /// </description>
+        /// </item>
+        /// </list>
+        /// </remarks>
         public IEnumerable<string> Accepted(DirectoryInfo directory)
         {
             var files = ListFiles(directory);
@@ -198,16 +304,30 @@ namespace GitignoreParserNet
         }
 
         /// <summary>
-        /// Notes:
-        /// - you MUST postfix a input directory with '/' to ensure the gitignore
-        ///   rules can be applied conform spec.
-        /// - you MAY prefix a input directory with '/' when that directory is
-        ///   'rooted' in the same directory as the compiled .gitignore spec file.
+        /// Tests whether the given file/directory fails the gitignore filters.
         /// </summary>
+        /// <param name="input">The file/directory path to test.</param>
+        /// <param name="expected">If not <see langword="null"/>, when the result of the method doesn't match the expected, print</param>
         /// <returns>
-        /// TRUE when the given `input` path FAILS the gitignore filters,
-        /// i.e. when the given input path is ACCEPTED.
+        /// <see langword="true"/> when the given `input` path <strong>fails</strong> the gitignore filters,
+        /// i.e. when the given input path is <strong>accepted</strong> (<i>not ignored</i>).
         /// </returns>
+        /// <remarks>
+        /// <list type="bullet">
+        /// <item>
+        /// <description>
+        /// You <strong>must</strong> postfix a input directory with a slash
+        /// ('/') to ensure the gitignore rules can be applied conform spec.
+        /// </description>
+        /// </item>
+        /// <item>
+        /// <description>
+        /// You <strong>may</strong> prefix a input directory with a slash ('/')
+        /// when that directory is 'rooted' in the search directory.
+        /// </description>
+        /// </item>
+        /// </list>
+        /// </remarks>
 #if DEBUG
         public bool Denies(string input, bool? expected = null)
 #else
@@ -287,11 +407,59 @@ namespace GitignoreParserNet
             return returnVal;
         }
 
-        public IEnumerable<string> Denied(IEnumerable<string> input)
+        /// <summary>
+        /// Tests whether the given files/directories fail the gitignore filters.
+        /// </summary>
+        /// <param name="inputs">The file/directory paths to test.</param>
+        /// <returns>
+        /// <see cref="IEnumerable{string}"/> with the paths that <strong>fail</strong> the gitignore filters,
+        /// i.e. the paths that are <strong>accepted</strong> (<i>not ignored</i>).
+        /// </returns>
+        /// <remarks>
+        /// <list type="bullet">
+        /// <item>
+        /// <description>
+        /// You <strong>must</strong> postfix a input directory with a slash
+        /// ('/') to ensure the gitignore rules can be applied conform spec.
+        /// </description>
+        /// </item>
+        /// <item>
+        /// <description>
+        /// You <strong>may</strong> prefix a input directory with a slash ('/')
+        /// when that directory is 'rooted' in the search directory.
+        /// </description>
+        /// </item>
+        /// </list>
+        /// </remarks>
+        public IEnumerable<string> Denied(IEnumerable<string> inputs)
         {
-            return input.Where(f => Denies(f));
+            return inputs.Where(f => Denies(f));
         }
 
+        /// <summary>
+        /// Tests whether the given files/subdirectories under the specified directory fail the gitignore filters.
+        /// </summary>
+        /// <param name="directory">The directory to test.</param>
+        /// <returns>
+        /// <see cref="IEnumerable{string}"/> with the paths that <strong>fail</strong> the gitignore filters,
+        /// i.e. the paths that are <strong>accepted</strong> (<i>not ignored</i>).
+        /// </returns>
+        /// <remarks>
+        /// <list type="bullet">
+        /// <item>
+        /// <description>
+        /// You <strong>must</strong> postfix a input directory with a slash
+        /// ('/') to ensure the gitignore rules can be applied conform spec.
+        /// </description>
+        /// </item>
+        /// <item>
+        /// <description>
+        /// You <strong>may</strong> prefix a input directory with a slash ('/')
+        /// when that directory is 'rooted' in the search directory.
+        /// </description>
+        /// </item>
+        /// </list>
+        /// </remarks>
         public IEnumerable<string> Denied(DirectoryInfo directory)
         {
             var files = ListFiles(directory);
@@ -299,24 +467,33 @@ namespace GitignoreParserNet
         }
 
         /// <summary>
-        /// <para>
         /// You can use this method to help construct the decision path when you
-        /// process nested .gitignore files: .gitignore filters in subdirectories
-        /// MAY override parent .gitignore filters only when there's actually ANY
-        /// filter in the child .gitignore after all.
-        /// </para>
-        /// <para>
-        /// Notes:
-        /// - you MUST postfix a input directory with '/' to ensure the gitignore
-        ///   rules can be applied conform spec.
-        /// - you MAY prefix a input directory with '/' when that directory is
-        ///   'rooted' in the same directory as the compiled .gitignore spec file.
-        /// </para>
+        /// process nested gitignore files: gitignore filters in subdirectories
+        /// <strong>may</strong> override parent gitignore filters only when
+        /// there's actually <strong>any</strong> filter in the child gitignore
+        /// after all.
         /// </summary>
+        /// <param name="input">The file/directory path to test.</param>
+        /// <param name="expected">If not <see langword="null"/>, when the result of the method doesn't match the expected, print</param>
         /// <returns>
-        /// TRUE when the given `input` path is inspected by any .gitignore
-        /// filter line.
+        /// <see langword="true"/> when the given `input` path is inspected by the gitignore filters.
         /// </returns>
+        /// <remarks>
+        /// <list type="bullet">
+        /// <item>
+        /// <description>
+        /// You <strong>must</strong> postfix a input directory with a slash
+        /// ('/') to ensure the gitignore rules can be applied conform spec.
+        /// </description>
+        /// </item>
+        /// <item>
+        /// <description>
+        /// You <strong>may</strong> prefix a input directory with a slash ('/')
+        /// when that directory is 'rooted' in the search directory.
+        /// </description>
+        /// </item>
+        /// </list>
+        /// </remarks>
 #if DEBUG
         public bool Inspects(string input, bool? expected = null)
 #else
@@ -508,11 +685,16 @@ namespace GitignoreParserNet
             public string Combine { get; set; } = combine;
             public bool ReturnVal { get; set; } = returnVal;
         }
+
+        /// <summary>
+        /// This event will be invoked if any of `Accepts()`, `Denies()` or `Inspects()`
+        /// fail to match the expected result.
+        /// </summary>
         public event EventHandler<OnExpectedMatchFailEventArgs>? OnExpectedMatchFail;
 
         /// <summary>
-        /// Helper invoked when any `Accepts()`, `Denies()` or `Inspects()`
-        /// fail to help the developer analyze what is going on inside:
+        /// Helper invoked when any of `Accepts()`, `Denies()` or `Inspects()`
+        /// fail, to help the developer analyze what is going on inside:
         /// some gitignore spec bits are non-intuitive / non-trivial, after all.
         /// </summary>
         private void Diagnose(
