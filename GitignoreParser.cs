@@ -83,20 +83,23 @@ namespace GitignoreParserNet
             return (parser.Accepted(directory), parser.Denied(directory));
         }
 
-        static List<string> ListFiles(DirectoryInfo directory, string rootPath = "")
+        private static List<string> ListFiles(DirectoryInfo directory)
         {
-            if (rootPath.Length == 0)
-                rootPath = directory.FullName;
+            static List<string> AaddFiles(List<string> files, DirectoryInfo directory, string rootPath)
+            {
+                files.Add(directory.FullName.Substring(rootPath.Length) + '/');
 
-            List<string> files = [
-                directory.FullName.Substring(rootPath.Length) + '/'
-            ];
-            foreach (FileInfo file in directory.GetFiles())
-                files.Add(file.FullName.Substring(rootPath.Length + 1));
+                foreach (FileInfo file in directory.GetFiles())
+                    files.Add(file.FullName.Substring(rootPath.Length + 1));
 
-            foreach (DirectoryInfo subDir in directory.GetDirectories())
-                files.AddRange(ListFiles(subDir, rootPath));
+                foreach (DirectoryInfo subDir in directory.GetDirectories())
+                    files.AddRange(AaddFiles(files, subDir, rootPath));
 
+                return files;
+            }
+
+            List<string> files = [];
+            AaddFiles(files, directory, directory.FullName);
             return files;
         }
 
