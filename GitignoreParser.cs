@@ -480,7 +480,7 @@ namespace GitignoreParserNet
         }
 
 #if DEBUG
-        public sealed class OnFailEventArgs(
+        public sealed class OnExpectedMatchFailEventArgs(
             string query,
             string input,
             bool expected,
@@ -505,8 +505,7 @@ namespace GitignoreParserNet
             public string Combine { get; set; } = combine;
             public bool ReturnVal { get; set; } = returnVal;
         }
-        public delegate void OnFailEventHandler(object sender, OnFailEventArgs e);
-        public event EventHandler<OnFailEventArgs>? OnFail;
+        public event EventHandler<OnExpectedMatchFailEventArgs>? OnExpectedMatchFail;
 
         /// <summary>
         /// Helper invoked when any `Accepts()`, `Denies()` or `Inspects()`
@@ -525,26 +524,28 @@ namespace GitignoreParserNet
             Match? denyMatch,
             string combine,
             bool returnVal
-            )
+        )
         {
-            if (OnFail != null)
+            if (OnExpectedMatchFail != null)
             {
-                OnFail(this,
-                    new OnFailEventArgs(
-                            query,
-                            input,
-                            expected,
-                            acceptRe,
-                            acceptTest,
-                            acceptMatch,
-                            denyRe,
-                            denyTest,
-                            denyMatch,
-                            combine,
-                            returnVal
-                        ));
+                OnExpectedMatchFail(this,
+                    new OnExpectedMatchFailEventArgs(
+                        query,
+                        input,
+                        expected,
+                        acceptRe,
+                        acceptTest,
+                        acceptMatch,
+                        denyRe,
+                        denyTest,
+                        denyMatch,
+                        combine,
+                        returnVal
+                    )
+                );
                 return;
             }
+
             var log = new StringBuilder()
                 .Append('\'').Append(query).AppendLine("': {")
                 .Append("\tquery: '").Append(query).AppendLine("',")

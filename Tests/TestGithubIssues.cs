@@ -123,7 +123,7 @@ namespace Tests.TestGithubIssues
         {
             var gitignore = new GitignoreParser("node_modules");
             int count = 0;
-            gitignore.OnFail += (sender, e) => count++;
+            gitignore.OnExpectedMatchFail += (sender, e) => count++;
 
             Assert.AreEqual(false, gitignore.Accepts("node_modules", true  /* INTENTIONALLY WRONG */), "Accepts() call is expected to return FALSE!");
             Assert.AreEqual(1, count, "gitignore.Diagnose() should have been invoked once from inside the Accepts() call!");
