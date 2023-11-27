@@ -48,7 +48,7 @@ namespace GitignoreParserNet
             {
                 if (list.Count == 0)
                 {
-                    return (MatchEmptyRegex, new Regex[0]);
+                    return (MatchEmptyRegex, Array.Empty<Regex>());
                 }
                 else
                 {
@@ -82,10 +82,9 @@ namespace GitignoreParserNet
             if (rootPath.Length == 0)
                 rootPath = directory.FullName;
 
-            List<string> files = new()
-            {
+            List<string> files = [
                 directory.FullName.Substring(rootPath.Length) + '/'
-            };
+            ];
             foreach (FileInfo file in directory.GetFiles())
                 files.Add(file.FullName.Substring(rootPath.Length + 1));
 
@@ -462,7 +461,7 @@ namespace GitignoreParserNet
             try
             {
 #pragma warning disable S1481 // Unused local variables should be removed
-                Regex regex = new Regex($"(?:{re})");
+                Regex regex = new($"(?:{re})"); // throws ArgumentException if a regular expression parsing error occurred.
 #pragma warning restore S1481 // Unused local variables should be removed
             }
             catch (ArgumentException ex)
@@ -475,45 +474,30 @@ namespace GitignoreParserNet
         }
 
 #if DEBUG
-        public class OnFailEventArgs : EventArgs
+        public sealed class OnFailEventArgs(
+            string query,
+            string input,
+            bool expected,
+            Regex acceptRe,
+            bool acceptTest,
+            Match? acceptMatch,
+            Regex denyRe,
+            bool denyTest,
+            Match? denyMatch,
+            string combine,
+            bool returnVal) : EventArgs
         {
-            public string Query { get; set; }
-            public string Input { get; set; }
-            public bool Expected { get; set; }
-            public Regex AcceptRe { get; set; }
-            public bool AcceptTest { get; set; }
-            public Match? AcceptMatch { get; set; }
-            public Regex DenyRe { get; set; }
-            public bool DenyTest { get; set; }
-            public Match? DenyMatch { get; set; }
-            public string Combine { get; set; }
-            public bool ReturnVal { get; set; }
-
-            public OnFailEventArgs(
-                string query,
-                string input,
-                bool expected,
-                Regex acceptRe,
-                bool acceptTest,
-                Match? acceptMatch,
-                Regex denyRe,
-                bool denyTest,
-                Match? denyMatch,
-                string combine,
-                bool returnVal)
-            {
-                Query = query;
-                Input = input;
-                Expected = expected;
-                AcceptRe = acceptRe;
-                AcceptTest = acceptTest;
-                AcceptMatch = acceptMatch;
-                DenyRe = denyRe;
-                DenyTest = denyTest;
-                DenyMatch = denyMatch;
-                Combine = combine;
-                ReturnVal = returnVal;
-            }
+            public string Query { get; set; } = query;
+            public string Input { get; set; } = input;
+            public bool Expected { get; set; } = expected;
+            public Regex AcceptRe { get; set; } = acceptRe;
+            public bool AcceptTest { get; set; } = acceptTest;
+            public Match? AcceptMatch { get; set; } = acceptMatch;
+            public Regex DenyRe { get; set; } = denyRe;
+            public bool DenyTest { get; set; } = denyTest;
+            public Match? DenyMatch { get; set; } = denyMatch;
+            public string Combine { get; set; } = combine;
+            public bool ReturnVal { get; set; } = returnVal;
         }
         public delegate void OnFailEventHandler(object sender, OnFailEventArgs e);
         public event EventHandler<OnFailEventArgs>? OnFail;
