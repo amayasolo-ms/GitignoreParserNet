@@ -20,6 +20,8 @@ namespace GitignoreParserNet
     /// <seealso href="https://github.com/GerHobbelt"/>
     public sealed class GitignoreParser
     {
+        private static readonly string[] LINEBREAKS = ["\r\n", "\r", "\n"];
+
         private readonly (Regex Merged, Regex[] Individual) Positives;
         private readonly (Regex Merged, Regex[] Individual) Negatives;
 
@@ -55,7 +57,7 @@ namespace GitignoreParserNet
             var regexOptions = compileRegex ? RegexOptions.Compiled : RegexOptions.None;
 
             (List<string> positive, List<string> negative) = content
-                .Split(new string[] { "\r\n", "\r", "\n" }, StringSplitOptions.None)
+                .Split(LINEBREAKS, StringSplitOptions.None)
                 .Select(line => line.Trim())
                 .Where(line => !string.IsNullOrWhiteSpace(line) && !line.StartsWith('#'))
                 .Aggregate<string, (List<string>, List<string>), (List<string>, List<string>)>(
@@ -96,11 +98,16 @@ namespace GitignoreParserNet
         /// <param name="content">The string containing the gitignore rules.</param>
         /// <param name="directoryPath">The directory path to the contents of which to apply the gitignore rules.</param>
         /// <returns>Files and directories filtered with the given gitignore rules.</returns>
-        public static (IEnumerable<string> Accepted, IEnumerable<string> Denied) Parse(string content, string directoryPath)
+        public static (IEnumerable<string> Accepted, IEnumerable<string> Denied) Parse(string content, string directoryPath, bool compileRegex = false)
         {
-            GitignoreParser parser = new(content, false);
             DirectoryInfo directory = new(directoryPath);
-            return (parser.Accepted(directory), parser.Denied(directory));
+            GitignoreParser parser = new(content, compileRegex);
+
+            var fileResults = parser.ProcessFiles(directory);
+            var accepted = fileResults.Where(x => x.Accepted).Select(x => x.FilePath).ToArray();
+            var denied = fileResults.Where(x => x.Denied).Select(x => x.FilePath).ToArray();
+
+            return (accepted, denied);
         }
 
         /// <summary>
@@ -111,15 +118,19 @@ namespace GitignoreParserNet
         /// <param name="fileEncoding">The encoding applied to the contents of the file.</param>
         /// <returns>Files and directories filtered with the given gitignore rules.</returns>
         /// <exception cref="DirectoryNotFoundException">Couldn't find the parent dirrectory for <paramref name="gitignorePath"/>.</exception>
-        public static (IEnumerable<string> Accepted, IEnumerable<string> Denied) Parse(string gitignorePath, Encoding fileEncoding, string? directoryPath = null)
+        public static (IEnumerable<string> Accepted, IEnumerable<string> Denied) Parse(string gitignorePath, Encoding fileEncoding, string? directoryPath = null, bool compileRegex = false)
         {
-            GitignoreParser parser = new(gitignorePath, fileEncoding, false);
-
             DirectoryInfo directory = directoryPath != null
                 ? new(directoryPath)
                 : (new FileInfo(gitignorePath).Directory ?? throw new DirectoryNotFoundException($"Couldn't find the parent dirrectory for \"{gitignorePath}\""));
 
-            return (parser.Accepted(directory), parser.Denied(directory));
+            GitignoreParser parser = new(gitignorePath, fileEncoding, compileRegex);
+
+            var fileResults = parser.ProcessFiles(directory);
+            var accepted = fileResults.Where(x => x.Accepted).Select(x => x.FilePath).ToArray();
+            var denied = fileResults.Where(x => x.Denied).Select(x => x.FilePath).ToArray();
+
+            return (accepted, denied);
         }
 
         /// <summary>
@@ -127,24 +138,26 @@ namespace GitignoreParserNet
         /// </summary>
         /// <param name="directory">The directory to traverse.</param>
         /// <returns>The list of relative paths of subdirectories and files.</returns>
-        private static List<string> ListFiles(DirectoryInfo directory)
+        private static string[] ListFiles(DirectoryInfo directory)
         {
-            static List<string> AaddFiles(List<string> files, DirectoryInfo directory, string rootPath)
-            {
-                files.Add(directory.FullName.Substring(rootPath.Length) + '/');
+            var directoryPath = directory.FullName;
+            var files = Directory.GetFiles(directoryPath, "*.*", SearchOption.AllDirectories)
+                .Select(f => f.Substring(directoryPath.Length + 1))
+                .ToList();
+            files.Insert(0, "/");
 
-                foreach (FileInfo file in directory.GetFiles())
-                    files.Add(file.FullName.Substring(rootPath.Length + 1));
+            return [.. files];
+        }
 
-                foreach (DirectoryInfo subDir in directory.GetDirectories())
-                    files.AddRange(AaddFiles(files, subDir, rootPath));
-
-                return files;
-            }
-
-            List<string> files = [];
-            AaddFiles(files, directory, directory.FullName);
-            return files;
+        /// <summary>
+        /// Returns a tuple containing information about the acceptance or denieal of a file.
+        /// </summary>
+        /// <param name="directory">The directory to traverse.</param>
+        /// <returns>A tuple containing information about the acceptance or denieal of a file.</returns>
+        private (string FilePath, bool Accepted, bool Denied)[] ProcessFiles(DirectoryInfo directory)
+        {
+            var files = ListFiles(directory);
+            return files.Select(f => (FilePath: f, Accepted: Accepts(f), Denied: Denies(f))).ToArray();
         }
 
         /// <summary>
