@@ -20,6 +20,8 @@ namespace GitignoreParserNet
     /// <seealso href="https://github.com/GerHobbelt"/>
     public sealed class GitignoreParser
     {
+        private static readonly string[] LINEBREAKS = ["\r\n", "\r", "\n"];
+
         private readonly (Regex Merged, Regex[] Individual) Positives;
         private readonly (Regex Merged, Regex[] Individual) Negatives;
 
@@ -55,7 +57,7 @@ namespace GitignoreParserNet
             var regexOptions = compileRegex ? RegexOptions.Compiled : RegexOptions.None;
 
             (List<string> positive, List<string> negative) = content
-                .Split(new string[] { "\r\n", "\r", "\n" }, StringSplitOptions.None)
+                .Split(LINEBREAKS, StringSplitOptions.None)
                 .Select(line => line.Trim())
                 .Where(line => !string.IsNullOrWhiteSpace(line) && !line.StartsWith('#'))
                 .Aggregate<string, (List<string>, List<string>), (List<string>, List<string>)>(
@@ -100,6 +102,7 @@ namespace GitignoreParserNet
         {
             GitignoreParser parser = new(content, false);
             DirectoryInfo directory = new(directoryPath);
+
             return (parser.Accepted(directory), parser.Denied(directory));
         }
 
