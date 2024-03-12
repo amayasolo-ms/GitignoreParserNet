@@ -98,12 +98,16 @@ namespace GitignoreParserNet
         /// <param name="content">The string containing the gitignore rules.</param>
         /// <param name="directoryPath">The directory path to the contents of which to apply the gitignore rules.</param>
         /// <returns>Files and directories filtered with the given gitignore rules.</returns>
-        public static (IEnumerable<string> Accepted, IEnumerable<string> Denied) Parse(string content, string directoryPath)
+        public static (IEnumerable<string> Accepted, IEnumerable<string> Denied) Parse(string content, string directoryPath, bool compileRegex = false)
         {
-            GitignoreParser parser = new(content, false);
             DirectoryInfo directory = new(directoryPath);
+            GitignoreParser parser = new(content, compileRegex);
 
-            return (parser.Accepted(directory), parser.Denied(directory));
+            var fileResults = parser.ProcessFiles(directory);
+            var accepted = fileResults.Where(x => x.Accepted).Select(x => x.FilePath).ToArray();
+            var denied = fileResults.Where(x => x.Accepted).Select(x => x.FilePath).ToArray();
+
+            return (accepted, denied);
         }
 
         /// <summary>
@@ -114,15 +118,19 @@ namespace GitignoreParserNet
         /// <param name="fileEncoding">The encoding applied to the contents of the file.</param>
         /// <returns>Files and directories filtered with the given gitignore rules.</returns>
         /// <exception cref="DirectoryNotFoundException">Couldn't find the parent dirrectory for <paramref name="gitignorePath"/>.</exception>
-        public static (IEnumerable<string> Accepted, IEnumerable<string> Denied) Parse(string gitignorePath, Encoding fileEncoding, string? directoryPath = null)
+        public static (IEnumerable<string> Accepted, IEnumerable<string> Denied) Parse(string gitignorePath, Encoding fileEncoding, string? directoryPath = null, bool compileRegex = false)
         {
-            GitignoreParser parser = new(gitignorePath, fileEncoding, false);
-
             DirectoryInfo directory = directoryPath != null
                 ? new(directoryPath)
                 : (new FileInfo(gitignorePath).Directory ?? throw new DirectoryNotFoundException($"Couldn't find the parent dirrectory for \"{gitignorePath}\""));
 
-            return (parser.Accepted(directory), parser.Denied(directory));
+            GitignoreParser parser = new(gitignorePath, fileEncoding, compileRegex);
+
+            var fileResults = parser.ProcessFiles(directory);
+            var accepted = fileResults.Where(x => x.Accepted).Select(x => x.FilePath).ToArray();
+            var denied = fileResults.Where(x => x.Accepted).Select(x => x.FilePath).ToArray();
+
+            return (accepted, denied);
         }
 
         /// <summary>
@@ -139,6 +147,17 @@ namespace GitignoreParserNet
             files.Insert(0, "/");
 
             return [.. files];
+        }
+
+        /// <summary>
+        /// Returns a tuple containing information about the acceptance or denieal of a file.
+        /// </summary>
+        /// <param name="directory">The directory to traverse.</param>
+        /// <returns>A tuple containing information about the acceptance or denieal of a file.</returns>
+        private (string FilePath, bool Accepted, bool Denied)[] ProcessFiles(DirectoryInfo directory)
+        {
+            var files = ListFiles(directory);
+            return files.Select(f => (FilePath: f, Accepted: Accepts(f), Denied: Denies(f))).ToArray();
         }
 
         /// <summary>
