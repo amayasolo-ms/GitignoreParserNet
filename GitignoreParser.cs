@@ -130,24 +130,15 @@ namespace GitignoreParserNet
         /// </summary>
         /// <param name="directory">The directory to traverse.</param>
         /// <returns>The list of relative paths of subdirectories and files.</returns>
-        private static List<string> ListFiles(DirectoryInfo directory)
+        private static string[] ListFiles(DirectoryInfo directory)
         {
-            static List<string> AaddFiles(List<string> files, DirectoryInfo directory, string rootPath)
-            {
-                files.Add(directory.FullName.Substring(rootPath.Length) + '/');
+            var directoryPath = directory.FullName;
+            var files = Directory.GetFiles(directoryPath, "*.*", SearchOption.AllDirectories)
+                .Select(f => f.Substring(directoryPath.Length + 1))
+                .ToList();
+            files.Insert(0, "/");
 
-                foreach (FileInfo file in directory.GetFiles())
-                    files.Add(file.FullName.Substring(rootPath.Length + 1));
-
-                foreach (DirectoryInfo subDir in directory.GetDirectories())
-                    files.AddRange(AaddFiles(files, subDir, rootPath));
-
-                return files;
-            }
-
-            List<string> files = [];
-            AaddFiles(files, directory, directory.FullName);
-            return files;
+            return [.. files];
         }
 
         /// <summary>
