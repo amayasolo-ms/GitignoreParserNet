@@ -97,6 +97,7 @@ namespace GitignoreParserNet
         /// </summary>
         /// <param name="content">The string containing the gitignore rules.</param>
         /// <param name="directoryPath">The directory path to the contents of which to apply the gitignore rules.</param>
+        /// <param name="compileRegex">If <see langword="true"/>, the Regex objects will be compiled to improve consecutive uses.</param>
         /// <returns>Files and directories filtered with the given gitignore rules.</returns>
         public static (IEnumerable<string> Accepted, IEnumerable<string> Denied) Parse(string content, string directoryPath, bool compileRegex = false)
         {
@@ -116,6 +117,7 @@ namespace GitignoreParserNet
         /// </summary>
         /// <param name="gitignorePath">Path to the gitignore file.</param>
         /// <param name="fileEncoding">The encoding applied to the contents of the file.</param>
+        /// <param name="compileRegex">If <see langword="true"/>, the Regex objects will be compiled to improve consecutive uses.</param>
         /// <returns>Files and directories filtered with the given gitignore rules.</returns>
         /// <exception cref="DirectoryNotFoundException">Couldn't find the parent dirrectory for <paramref name="gitignorePath"/>.</exception>
         public static (IEnumerable<string> Accepted, IEnumerable<string> Denied) Parse(string gitignorePath, Encoding fileEncoding, string? directoryPath = null, bool compileRegex = false)
