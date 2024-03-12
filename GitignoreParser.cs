@@ -105,7 +105,7 @@ namespace GitignoreParserNet
 
             var fileResults = parser.ProcessFiles(directory);
             var accepted = fileResults.Where(x => x.Accepted).Select(x => x.FilePath).ToArray();
-            var denied = fileResults.Where(x => x.Accepted).Select(x => x.FilePath).ToArray();
+            var denied = fileResults.Where(x => x.Denied).Select(x => x.FilePath).ToArray();
 
             return (accepted, denied);
         }
@@ -128,7 +128,7 @@ namespace GitignoreParserNet
 
             var fileResults = parser.ProcessFiles(directory);
             var accepted = fileResults.Where(x => x.Accepted).Select(x => x.FilePath).ToArray();
-            var denied = fileResults.Where(x => x.Accepted).Select(x => x.FilePath).ToArray();
+            var denied = fileResults.Where(x => x.Denied).Select(x => x.FilePath).ToArray();
 
             return (accepted, denied);
         }
