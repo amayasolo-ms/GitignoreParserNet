@@ -8,15 +8,14 @@
     <LangVersion>12</LangVersion>
     <RootNamespace>GitignoreParserNet</RootNamespace>
     <Authors>Guiorgy</Authors>
-    <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/Guiorgy/GitignoreParserNet</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Guiorgy/GitignoreParserNet</RepositoryUrl>
     <Version>0.2.0.12</Version>
     <AssemblyVersion>$(Version)</AssemblyVersion>
     <FileVersion>$(Version)</FileVersion>
-    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Copyright>Guiorgy</Copyright>
+    <Copyright>Copyright 2014 codemix ltd.; Copyright (c) 2021 Guiorgy</Copyright>
     <Description>A simple yet complete .gitignore parser for .NET.
 Supports all features listed in the git-scm gitignore manpage.</Description>
     <PackageIcon>Gitignore.png</PackageIcon>
