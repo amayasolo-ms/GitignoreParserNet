@@ -22,29 +22,29 @@ namespace GitignoreParserNet
         public static readonly Regex AsteriksRegex = GeneratedAsteriksRegex();
         public static readonly Regex SlashRegex = GeneratedSlashRegex();
 
-        [GeneratedRegex("$^", RegexOptions.Compiled)]
+        [GeneratedRegex("$^")]
         private static partial Regex GeneratedMatchEmptyRegex();
-        [GeneratedRegex(@"^((?:[^\[\\]|(?:\\.))*)\[((?:[^\]\\]|(?:\\.))*)\]", RegexOptions.Compiled)]
+        [GeneratedRegex(@"^((?:[^\[\\]|(?:\\.))*)\[((?:[^\]\\]|(?:\\.))*)\]")]
         private static partial Regex GeneratedRangeRegex();
-        [GeneratedRegex(@"\\(.)", RegexOptions.Compiled)]
+        [GeneratedRegex(@"\\(.)")]
         private static partial Regex GeneratedBackslashRegex();
-        [GeneratedRegex(@"[\-\[\]\{\}\(\)\+\.\\\^\$\|]", RegexOptions.Compiled)]
+        [GeneratedRegex(@"[\-\[\]\{\}\(\)\+\.\\\^\$\|]")]
         private static partial Regex GeneratedSpecialCharactersRegex();
-        [GeneratedRegex(@"\?", RegexOptions.Compiled)]
+        [GeneratedRegex(@"\?")]
         private static partial Regex GeneratedQuestionMarkRegex();
-        [GeneratedRegex(@"\/\*\*\/", RegexOptions.Compiled)]
+        [GeneratedRegex(@"\/\*\*\/")]
         private static partial Regex GeneratedSlashDoubleAsteriksSlashRegex();
-        [GeneratedRegex(@"^\*\*\/", RegexOptions.Compiled)]
+        [GeneratedRegex(@"^\*\*\/")]
         private static partial Regex GeneratedDoubleAsteriksSlashRegex();
-        [GeneratedRegex(@"\/\*\*$", RegexOptions.Compiled)]
+        [GeneratedRegex(@"\/\*\*$")]
         private static partial Regex GeneratedSlashDoubleAsteriksRegex();
-        [GeneratedRegex(@"\*\*", RegexOptions.Compiled)]
+        [GeneratedRegex(@"\*\*")]
         private static partial Regex GeneratedDoubleAsteriksRegex();
-        [GeneratedRegex(@"\/\*(\/|$)", RegexOptions.Compiled)]
+        [GeneratedRegex(@"\/\*(\/|$)")]
         private static partial Regex GeneratedSlashAsteriksEndOrSlashRegex();
-        [GeneratedRegex(@"\*", RegexOptions.Compiled)]
+        [GeneratedRegex(@"\*")]
         private static partial Regex GeneratedAsteriksRegex();
-        [GeneratedRegex(@"\/", RegexOptions.Compiled)]
+        [GeneratedRegex(@"\/")]
         private static partial Regex GeneratedSlashRegex();
 
 #else
