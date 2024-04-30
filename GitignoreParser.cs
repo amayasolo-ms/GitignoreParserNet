@@ -643,7 +643,7 @@ namespace GitignoreParserNet
             }
 
             // prep regexes assuming we'll always prefix the check string with a '/':
-            reBuilder.Preappend(rooted ? @"^\/" : @"\/");
+            reBuilder.Prepend(rooted ? @"^\/" : @"\/");
             // cf spec:
             //
             //   If there is a separator at the end of the pattern then the pattern
