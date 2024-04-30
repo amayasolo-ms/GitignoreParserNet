@@ -127,22 +127,22 @@ public class TestDiagnose
         int count = 0;
         gitignore.OnExpectedMatchFail += (sender, e) => count++;
 
-        Assert.AreEqual(false, gitignore.Accepts("node_modules", true  /* INTENTIONALLY WRONG */), "Accepts() call is expected to return FALSE!");
+        Assert.IsFalse(gitignore.Accepts("node_modules", true  /* INTENTIONALLY WRONG */), "Accepts() call is expected to return FALSE!");
         Assert.AreEqual(1, count, "gitignore.Diagnose() should have been invoked once from inside the Accepts() call!");
         // the next one is matching the expectation, hence no Diagnose() call:
-        Assert.AreEqual(false, gitignore.Accepts("node_modules", false), "Accepts() call is expected to return FALSE!");
+        Assert.IsFalse(gitignore.Accepts("node_modules", false), "Accepts() call is expected to return FALSE!");
         Assert.AreEqual(1, count, "gitignore.Diagnose() should have been invoked once from inside the Accepts() call!");
 
-        Assert.AreEqual(true, gitignore.Denies("node_modules", false  /* INTENTIONALLY WRONG */), "Denies() call is expected to return TRUE!");
+        Assert.IsTrue(gitignore.Denies("node_modules", false  /* INTENTIONALLY WRONG */), "Denies() call is expected to return TRUE!");
         Assert.AreEqual(2, count, "gitignore.Diagnose() should have been invoked once from inside the Denies() call!");
         // the next one is matching the expectation, hence no Diagnose() call:
-        Assert.AreEqual(true, gitignore.Denies("node_modules", true), "Denies() call is expected to return TRUE!");
+        Assert.IsTrue(gitignore.Denies("node_modules", true), "Denies() call is expected to return TRUE!");
         Assert.AreEqual(2, count, "gitignore.Diagnose() should have been invoked once from inside the Denies() call!");
 
-        Assert.AreEqual(true, gitignore.Inspects("node_modules", false  /* INTENTIONALLY WRONG */), "Inspects() call is expected to return TRUE!");
+        Assert.IsTrue(gitignore.Inspects("node_modules", false  /* INTENTIONALLY WRONG */), "Inspects() call is expected to return TRUE!");
         Assert.AreEqual(3, count, "gitignore.Diagnose() should have been invoked once from inside the Inspects() call!");
         // the next one is matching the expectation, hence no Diagnose() call:
-        Assert.AreEqual(true, gitignore.Inspects("node_modules", true), "Inspects() call is expected to return TRUE!");
+        Assert.IsTrue(gitignore.Inspects("node_modules", true), "Inspects() call is expected to return TRUE!");
         Assert.AreEqual(3, count, "gitignore.Diagnose() should have been invoked once from inside the Inspects() call!");
     }
 }
