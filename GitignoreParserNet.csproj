@@ -15,7 +15,7 @@
     <AssemblyVersion>$(Version)</AssemblyVersion>
     <FileVersion>$(Version)</FileVersion>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Copyright>Copyright 2014 codemix ltd.; Copyright (c) 2021 Gyuirgy</Copyright>
+    <Copyright>Copyright 2014 codemix ltd.; Copyright (c) 2021 Guiorgy</Copyright>
     <Description>A simple yet complete .gitignore parser for .NET.
 Supports all features listed in the git-scm gitignore manpage.</Description>
     <PackageIcon>Gitignore.png</PackageIcon>
