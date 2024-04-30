@@ -746,22 +746,23 @@ public sealed class GitignoreParser
             return;
         }
 
-        var log = new StringBuilder()
-            .Append('\'').Append(query).AppendLine("': {")
-            .Append("\tquery: '").Append(query).AppendLine("',")
-            .Append("\tinput: '").Append(input).AppendLine("',")
-            .Append("\texpected: '").Append(expected).AppendLine("',")
-            .Append("\tacceptRe: '").Append(acceptRe).AppendLine("',")
-            .Append("\tacceptTest: '").Append(acceptTest).AppendLine("',")
-            .Append("\tacceptMatch: '").Append(acceptMatch).AppendLine("',")
-            .Append("\tdenyRe: '").Append(denyRe).AppendLine("',")
-            .Append("\tdenyTest: '").Append(denyTest).AppendLine("',")
-            .Append("\tdenyMatch: '").Append(denyMatch).AppendLine("',")
-            .Append("\tcombine: '").Append(combine).AppendLine("',")
-            .Append("\treturnVal: '").Append(returnVal).AppendLine("'")
-            .AppendLine("}")
-            .ToString();
-        Console.WriteLine(log);
+        Console.WriteLine(
+            $$"""
+            '{{query}}': {
+                'query': '{{query}}',
+                'input': '{{input}}',
+                'expected': '{{expected}}',
+                'acceptRe': '{{acceptRe}}',
+                'acceptTest': '{{acceptTest}}',
+                'acceptMatch': '{{acceptMatch}}',
+                'denyRe': '{{denyRe}}',
+                'denyTest': '{{denyTest}}',
+                'denyMatch': '{{denyMatch}}',
+                'combine': '{{combine}}',
+                'returnVal': '{{returnVal}}'
+            }
+            """
+        );
     }
 #endif
 }
