@@ -19,7 +19,6 @@
     <Description>A simple yet complete .gitignore parser for .NET.
 Supports all features listed in the git-scm gitignore manpage.</Description>
     <PackageIcon>Gitignore.png</PackageIcon>
-    <PackageIconUrl />
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
