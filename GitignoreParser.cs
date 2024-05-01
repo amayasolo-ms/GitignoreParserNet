@@ -143,12 +143,11 @@ public sealed class GitignoreParser
     private static string[] ListFiles(DirectoryInfo directory)
     {
         var directoryPath = directory.FullName;
-        var files = Directory.GetFiles(directoryPath, "*.*", SearchOption.AllDirectories)
-            .Select(f => f.Substring(directoryPath.Length + 1))
-            .ToList();
-        files.Insert(0, "/");
 
-        return [.. files];
+        return ((IEnumerable<string>)["/"]).Concat(
+            Directory.GetFiles(directoryPath, "*.*", SearchOption.AllDirectories)
+                .Select(f => f.Substring(directoryPath.Length + 1))
+        ).ToArray();
     }
 
     /// <summary>
