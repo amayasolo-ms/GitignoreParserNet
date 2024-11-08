@@ -1,5 +1,5 @@
 #pragma warning disable SA1636 // File header copyright text should match
-// Copied from (Minimatch by SLaks (https://www.nuget.org/packages/GitignoreParserNet - https://github.com/GerHobbelt/gitignore-parser)
+// Copied from (GitignoreParserNet by GerHobbelt (https://www.nuget.org/packages/GitignoreParserNet - https://github.com/GerHobbelt/gitignore-parser)
 // This code is licensed under the Apache 2.0 license.
 #pragma warning restore SA1636 // File header copyright text should match
 
