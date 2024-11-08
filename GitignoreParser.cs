@@ -1,4 +1,10 @@
-﻿using System;
+#pragma warning disable SA1636 // File header copyright text should match
+// Copied from (Minimatch by SLaks (https://www.nuget.org/packages/GitignoreParserNet - https://github.com/GerHobbelt/gitignore-parser)
+// This code is licensed under the Apache 2.0 license.
+#pragma warning restore SA1636 // File header copyright text should match
+
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -11,7 +17,7 @@ using static GitignoreParserNet.RegexPatterns;
 namespace GitignoreParserNet;
 
 /// <summary>
-/// A simple yet complete .gitignore parser for .NET
+/// A simple yet complete .gitignore parser for .NET.
 /// </summary>
 /// <remarks>
 /// This is a .NET port of the npm package gitignore-parser by Ger Hobbelt.
@@ -22,29 +28,35 @@ public sealed class GitignoreParser
 {
     private static readonly string[] LINEBREAKS = ["\r\n", "\r", "\n"];
 
-    private readonly (Regex Merged, Regex[] Individual) Positives;
-    private readonly (Regex Merged, Regex[] Individual) Negatives;
+    private readonly (Regex Merged, Regex[] Individual) positives;
+    private readonly (Regex Merged, Regex[] Individual) negatives;
 
     /// <summary>
-    /// Parses a string containing the gitignore rules.
+    /// Initializes a new instance of the <see cref="GitignoreParser"/> class.
     /// </summary>
     /// <param name="content">The string containing the gitignore rules.</param>
     /// <param name="compileRegex">If <see langword="true"/>, the Regex objects will be compiled to improve consecutive uses.</param>
     public GitignoreParser(string content, bool compileRegex = false)
     {
-        (Positives, Negatives) = Parse(content, compileRegex);
+        (this.positives, this.negatives) = Parse(content, compileRegex);
     }
 
     /// <summary>
-    /// Parses a file containing the gitignore rules.
+    /// Initializes a new instance of the <see cref="GitignoreParser"/> class with the specified gitignore content.
     /// </summary>
     /// <param name="gitignorePath">Path to the file containing the gitignore rules.</param>
     /// <param name="fileEncoding">The encoding applied to the contents of the file.</param>
     /// <param name="compileRegex">If <see langword="true"/>, the Regex objects will be compiled to improve consecutive uses.</param>
     public GitignoreParser(string gitignorePath, Encoding fileEncoding, bool compileRegex = false)
     {
-        (Positives, Negatives) = Parse(File.ReadAllText(gitignorePath, fileEncoding), compileRegex);
+        (this.positives, this.negatives) = Parse(File.ReadAllText(gitignorePath, fileEncoding), compileRegex);
     }
+
+    /// <summary>
+    /// This event will be invoked if any of `Accepts()`, `Denies()` or `Inspects()`
+    /// fail to match the expected result.
+    /// </summary>
+    public event EventHandler<OnExpectedMatchFailEventArgs>? OnExpectedMatchFail;
 
     /// <summary>
     /// Parses the given gitignore content and returns regex objects for matching positive and negativ filters.
@@ -52,7 +64,7 @@ public sealed class GitignoreParser
     /// <param name="content">The string containing the gitignore rules.</param>
     /// <param name="compileRegex">If <see langword="true"/>, the Regex objects will be compiled to improve consecutive uses.</param>
     /// <returns><see cref="Regex"/> objects for positive and negative matching for the given gitignore rules.</returns>
-    public static ((Regex Merged, Regex[] Individual) positives, (Regex Merged, Regex[] Individual) negatives) Parse(string content, bool compileRegex = false)
+    public static ((Regex Merged, Regex[] Individual) Positives, (Regex Merged, Regex[] Individual) Negatives) Parse(string content, bool compileRegex = false)
     {
         var regexOptions = compileRegex ? RegexOptions.Compiled : RegexOptions.None;
 
@@ -62,16 +74,20 @@ public sealed class GitignoreParser
             .Where(line => !string.IsNullOrWhiteSpace(line) && !line.StartsWith('#'))
             .Aggregate<string, (List<string>, List<string>), (List<string>, List<string>)>(
                 (new List<string>(), new List<string>()),
-                ((List<string> positive, List<string> negative) lists, string line) =>
+                ((List<string> Positives, List<string> Negatives) lists, string line) =>
                 {
                     if (line.StartsWith('!'))
-                        lists.negative.Add(line.Substring(1));
+                    {
+                        lists.Negatives.Add(line.Substring(1));
+                    }
                     else
-                        lists.positive.Add(line);
-                    return (lists.positive, lists.negative);
+                    {
+                        lists.Positives.Add(line);
+                    }
+
+                    return (lists.Positives, lists.Negatives);
                 },
-                ((List<string> positive, List<string> negative) lists) => lists
-            );
+                ((List<string> Positives, List<string> Negatives) lists) => lists);
 
         static (Regex Merged, Regex[] Individual) Submatch(List<string> list, RegexOptions regexOptions)
         {
@@ -84,8 +100,7 @@ public sealed class GitignoreParser
                 var reList = list.OrderBy(str => str).Select(PrepareRegexPattern).ToList();
                 return (
                     new Regex($"(?:{string.Join(")|(?:", reList)})", regexOptions),
-                    reList.Select(s => new Regex(s, regexOptions)).ToArray()
-                );
+                    reList.Select(s => new Regex(s, regexOptions)).ToArray());
             }
         }
 
@@ -117,6 +132,7 @@ public sealed class GitignoreParser
     /// </summary>
     /// <param name="gitignorePath">Path to the gitignore file.</param>
     /// <param name="fileEncoding">The encoding applied to the contents of the file.</param>
+    /// <param name="directoryPath">The directory path to the contents of which to apply the gitignore rules.</param>
     /// <param name="compileRegex">If <see langword="true"/>, the Regex objects will be compiled to improve consecutive uses.</param>
     /// <returns>Files and directories filtered with the given gitignore rules.</returns>
     /// <exception cref="DirectoryNotFoundException">Couldn't find the parent dirrectory for <paramref name="gitignorePath"/>.</exception>
@@ -136,36 +152,10 @@ public sealed class GitignoreParser
     }
 
     /// <summary>
-    /// Returns a list of relative paths of all subdirectories and files under the given directory (including the given directory itself).
-    /// </summary>
-    /// <param name="directory">The directory to traverse.</param>
-    /// <returns>The list of relative paths of subdirectories and files.</returns>
-    private static string[] ListFiles(DirectoryInfo directory)
-    {
-        var directoryPath = directory.FullName;
-
-        return ((IEnumerable<string>)["/"]).Concat(
-            Directory.GetFiles(directoryPath, "*.*", SearchOption.AllDirectories)
-                .Select(f => f.Substring(directoryPath.Length + 1))
-        ).ToArray();
-    }
-
-    /// <summary>
-    /// Returns a tuple containing information about the acceptance or denieal of a file.
-    /// </summary>
-    /// <param name="directory">The directory to traverse.</param>
-    /// <returns>A tuple containing information about the acceptance or denieal of a file.</returns>
-    private (string FilePath, bool Accepted, bool Denied)[] ProcessFiles(DirectoryInfo directory)
-    {
-        var files = ListFiles(directory);
-        return files.Select(f => (FilePath: f, Accepted: Accepts(f), Denied: Denies(f))).ToArray();
-    }
-
-    /// <summary>
     /// Tests whether the given file/directory passes the gitignore filters.
     /// </summary>
     /// <param name="input">The file/directory path to test.</param>
-    /// <param name="expected">If not <see langword="null"/>, when the result of the method doesn't match the expected, print</param>
+    /// <param name="expected">If not <see langword="null"/>, when the result of the method doesn't match the expected, print. </param>
     /// <returns>
     /// <see langword="true"/> when the given `input` path <strong>passes</strong> the gitignore filters,
     /// i.e. when the given input path is <strong>denied</strong> (<i>ignored</i>).
@@ -193,13 +183,17 @@ public sealed class GitignoreParser
 #endif
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
             input = input.Replace('\\', '/');
+        }
 
         if (!input.StartsWith('/'))
+        {
             input = "/" + input;
+        }
 
-        var acceptTest = Negatives.Merged.IsMatch(input);
-        var denyTest = Positives.Merged.IsMatch(input);
+        var acceptTest = this.negatives.Merged.IsMatch(input);
+        var denyTest = this.positives.Merged.IsMatch(input);
         var returnVal = acceptTest || !denyTest;
 
         // See the test/fixtures/gitignore.manpage.txt near line 680 (grep for "uber-nasty"):
@@ -213,7 +207,7 @@ public sealed class GitignoreParser
         if (acceptTest && denyTest)
         {
             int acceptLength = 0, denyLength = 0;
-            foreach (var re in Negatives.Individual)
+            foreach (var re in this.negatives.Individual)
             {
                 var m = re.Match(input);
                 if (m.Success && acceptLength < m.Value.Length)
@@ -224,7 +218,8 @@ public sealed class GitignoreParser
                     acceptLength = m.Value.Length;
                 }
             }
-            foreach (var re in Positives.Individual)
+
+            foreach (var re in this.positives.Individual)
             {
                 var m = re.Match(input);
                 if (m.Success && denyLength < m.Value.Length)
@@ -235,24 +230,24 @@ public sealed class GitignoreParser
                     denyLength = m.Value.Length;
                 }
             }
+
             returnVal = acceptLength >= denyLength;
         }
 #if DEBUG
         if (expected != null && expected != returnVal)
         {
-            Diagnose(
+            this.Diagnose(
                 "accepts",
                 input,
                 (bool)expected,
-                Negatives.Merged,
+                this.negatives.Merged,
                 acceptTest,
                 acceptMatch,
-                Positives.Merged,
+                this.positives.Merged,
                 denyTest,
                 denyMatch,
                 "(Accept || !Deny)",
-                returnVal
-            );
+                returnVal);
         }
 #endif
         return returnVal;
@@ -263,7 +258,7 @@ public sealed class GitignoreParser
     /// </summary>
     /// <param name="inputs">The file/directory paths to test.</param>
     /// <returns>
-    /// <see cref="IEnumerable{string}"/> with the paths that <strong>pass</strong> the gitignore filters,
+    /// <see cref="IEnumerable{String}"/> with the paths that <strong>pass</strong> the gitignore filters,
     /// i.e. the paths that are <strong>denied</strong> (<i>ignored</i>).
     /// </returns>
     /// <remarks>
@@ -284,7 +279,7 @@ public sealed class GitignoreParser
     /// </remarks>
     public IEnumerable<string> Accepted(IEnumerable<string> inputs)
     {
-        return inputs.Where(Accepts);
+        return inputs.Where(input => this.Accepts(input, null));
     }
 
     /// <summary>
@@ -292,7 +287,7 @@ public sealed class GitignoreParser
     /// </summary>
     /// <param name="directory">The directory to test.</param>
     /// <returns>
-    /// <see cref="IEnumerable{string}"/> with the paths that <strong>pass</strong> the gitignore filters,
+    /// <see cref="IEnumerable{String}"/> with the paths that <strong>pass</strong> the gitignore filters,
     /// i.e. the paths that are <strong>denied</strong> (<i>ignored</i>).
     /// </returns>
     /// <remarks>
@@ -314,14 +309,14 @@ public sealed class GitignoreParser
     public IEnumerable<string> Accepted(DirectoryInfo directory)
     {
         var files = ListFiles(directory);
-        return files.Where(Accepts);
+        return files.Where(input => this.Accepts(input, null));
     }
 
     /// <summary>
     /// Tests whether the given file/directory fails the gitignore filters.
     /// </summary>
     /// <param name="input">The file/directory path to test.</param>
-    /// <param name="expected">If not <see langword="null"/>, when the result of the method doesn't match the expected, print</param>
+    /// <param name="expected">If not <see langword="null"/>, when the result of the method doesn't match the expected, print. </param>
     /// <returns>
     /// <see langword="true"/> when the given `input` path <strong>fails</strong> the gitignore filters,
     /// i.e. when the given input path is <strong>accepted</strong> (<i>not ignored</i>).
@@ -349,13 +344,18 @@ public sealed class GitignoreParser
 #endif
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
             input = input.Replace('\\', '/');
+        }
 
         if (!input.StartsWith('/'))
+        {
             input = "/" + input;
+        }
 
-        var acceptTest = Negatives.Merged.IsMatch(input);
-        var denyTest = Positives.Merged.IsMatch(input);
+        var acceptTest = this.negatives.Merged.IsMatch(input);
+        var denyTest = this.positives.Merged.IsMatch(input);
+
         // boolean logic:
         //
         // Denies = !Accepts =>
@@ -376,7 +376,7 @@ public sealed class GitignoreParser
         if (acceptTest && denyTest)
         {
             int acceptLength = 0, denyLength = 0;
-            foreach (var re in Negatives.Individual)
+            foreach (var re in this.negatives.Individual)
             {
                 var m = re.Match(input);
                 if (m.Success && acceptLength < m.Value.Length)
@@ -387,7 +387,8 @@ public sealed class GitignoreParser
                     acceptLength = m.Value.Length;
                 }
             }
-            foreach (var re in Positives.Individual)
+
+            foreach (var re in this.positives.Individual)
             {
                 var m = re.Match(input);
                 if (m.Success && denyLength < m.Value.Length)
@@ -398,24 +399,24 @@ public sealed class GitignoreParser
                     denyLength = m.Value.Length;
                 }
             }
+
             returnVal = acceptLength < denyLength;
         }
 #if DEBUG
         if (expected != null && expected != returnVal)
         {
-            Diagnose(
+            this.Diagnose(
                 "denies",
                 input,
                 (bool)expected,
-                Negatives.Merged,
+                this.negatives.Merged,
                 acceptTest,
                 acceptMatch,
-                Positives.Merged,
+                this.positives.Merged,
                 denyTest,
                 denyMatch,
                 "(!Accept && Deny)",
-                returnVal
-            );
+                returnVal);
         }
 #endif
         return returnVal;
@@ -426,7 +427,7 @@ public sealed class GitignoreParser
     /// </summary>
     /// <param name="inputs">The file/directory paths to test.</param>
     /// <returns>
-    /// <see cref="IEnumerable{string}"/> with the paths that <strong>fail</strong> the gitignore filters,
+    /// <see cref="IEnumerable{String}"/> with the paths that <strong>fail</strong> the gitignore filters,
     /// i.e. the paths that are <strong>accepted</strong> (<i>not ignored</i>).
     /// </returns>
     /// <remarks>
@@ -447,7 +448,7 @@ public sealed class GitignoreParser
     /// </remarks>
     public IEnumerable<string> Denied(IEnumerable<string> inputs)
     {
-        return inputs.Where(Denies);
+        return inputs.Where(input => this.Denies(input, null));
     }
 
     /// <summary>
@@ -455,29 +456,13 @@ public sealed class GitignoreParser
     /// </summary>
     /// <param name="directory">The directory to test.</param>
     /// <returns>
-    /// <see cref="IEnumerable{string}"/> with the paths that <strong>fail</strong> the gitignore filters,
+    /// <see cref="IEnumerable{String}"/> with the paths that <strong>fail</strong> the gitignore filters,
     /// i.e. the paths that are <strong>accepted</strong> (<i>not ignored</i>).
     /// </returns>
-    /// <remarks>
-    /// <list type="bullet">
-    /// <item>
-    /// <description>
-    /// You <strong>must</strong> postfix a input directory with a slash
-    /// ('/') to ensure the gitignore rules can be applied conform spec.
-    /// </description>
-    /// </item>
-    /// <item>
-    /// <description>
-    /// You <strong>may</strong> prefix a input directory with a slash ('/')
-    /// when that directory is 'rooted' in the search directory.
-    /// </description>
-    /// </item>
-    /// </list>
-    /// </remarks>
     public IEnumerable<string> Denied(DirectoryInfo directory)
     {
         var files = ListFiles(directory);
-        return files.Where(Denies);
+        return files.Where(input => this.Denies(input, null));
     }
 
     /// <summary>
@@ -488,7 +473,7 @@ public sealed class GitignoreParser
     /// after all.
     /// </summary>
     /// <param name="input">The file/directory path to test.</param>
-    /// <param name="expected">If not <see langword="null"/>, when the result of the method doesn't match the expected, print</param>
+    /// <param name="expected">If not <see langword="null"/>, when the result of the method doesn't match the expected, print. </param>
     /// <returns>
     /// <see langword="true"/> when the given `input` path is inspected by the gitignore filters.
     /// </returns>
@@ -515,38 +500,42 @@ public sealed class GitignoreParser
 #endif
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
             input = input.Replace('\\', '/');
+        }
 
         if (!input.StartsWith('/'))
+        {
             input = "/" + input;
+        }
 
-        var acceptTest = Negatives.Merged.IsMatch(input);
-        var denyTest = Positives.Merged.IsMatch(input);
+        var acceptTest = this.negatives.Merged.IsMatch(input);
+        var denyTest = this.positives.Merged.IsMatch(input);
+
         // when any filter 'touches' the input path, it must match,
         // no matter whether it's a deny or accept filter line:
         var returnVal = acceptTest || denyTest;
 #if DEBUG
         if (expected != null && expected != returnVal)
         {
-            Diagnose(
+            this.Diagnose(
                 "inspects",
                 input,
                 (bool)expected,
-                Negatives.Merged,
+                this.negatives.Merged,
                 acceptTest,
                 null,
-                Positives.Merged,
+                this.positives.Merged,
                 denyTest,
                 null,
                 "(Accept || Deny)",
-                returnVal
-            );
+                returnVal);
         }
 #endif
         return returnVal;
     }
 
-    [SuppressMessage("Major Code Smell", "S1121:Assignments should not be made from within sub-expressions")]
+    [SuppressMessage("Major Code Smell", "S1121:Assignments should not be made from within sub-expressions", Justification = "This is necessary to maintain the current logic flow and readability.")]
     private static string PrepareRegexPattern(string pattern)
     {
         // https://git-scm.com/docs/gitignore#_pattern_format
@@ -574,39 +563,47 @@ public sealed class GitignoreParser
             rooted = true;
             pattern = pattern.Substring(1);
         }
+
         if (pattern.EndsWith('/'))
         {
             directory = true;
             pattern = pattern.Substring(0, pattern.Length - 1);
         }
 
-        string transpileRegexPart(string _re)
+        string TranspileRegexPart(string reg)
         {
-            if (_re.Length == 0) return _re;
+            if (reg.Length == 0)
+            {
+                return reg;
+            }
+
             // unescape for these will be escaped again in the subsequent `.Replace(...)`,
             // whether they were escaped before or not:
-            _re = BackslashRegex.Replace(_re, "$1");
+            reg = BackslashRegex.Replace(reg, "$1");
+
             // escape special regex characters:
-            _re = SpecialCharactersRegex.Replace(_re, @"\$&");
-            _re = QuestionMarkRegex.Replace(_re, "[^/]");
-            _re = SlashDoubleAsteriksSlashRegex.Replace(_re, "(?:/|(?:/.+/))");
-            _re = DoubleAsteriksSlashRegex.Replace(_re, "(?:|(?:.+/))");
-            _re = SlashDoubleAsteriksRegex.Replace(_re, _ =>
+            reg = SpecialCharactersRegex.Replace(reg, @"\$&");
+            reg = QuestionMarkRegex.Replace(reg, "[^/]");
+            reg = SlashDoubleAsteriksSlashRegex.Replace(reg, "(?:/|(?:/.+/))");
+            reg = DoubleAsteriksSlashRegex.Replace(reg, "(?:|(?:.+/))");
+            reg = SlashDoubleAsteriksRegex.Replace(reg, _ =>
             {
                 directory = true;       // `a/**` should match `a/`, `a/b/` and `a/b`, the latter by implication of matching directory `a/`
                 return "(?:|(?:/.+))";  // `a/**` also accepts `a/` itself
             });
-            _re = DoubleAsteriksRegex.Replace(_re, ".*");
+            reg = DoubleAsteriksRegex.Replace(reg, ".*");
+
             // `a/*` should match `a/b` and `a/b/` but NOT `a` or `a/`
             // meanwhile, `a/*/` should match `a/b/` and `a/b/c` but NOT `a` or `a/` or `a/b`
-            _re = SlashAsteriksEndOrSlashRegex.Replace(_re, "/[^/]+$1");
-            _re = AsteriksRegex.Replace(_re, "[^/]*");
-            _re = SlashRegex.Replace(_re, @"\/");
-            return _re;
+            reg = SlashAsteriksEndOrSlashRegex.Replace(reg, "/[^/]+$1");
+            reg = AsteriksRegex.Replace(reg, "[^/]*");
+            reg = SlashRegex.Replace(reg, @"\/");
+            return reg;
         }
 
         // keep character ranges intact:
         Regex rangeRe = RangeRegex;
+
         // ^ could have used the 'y' sticky flag, but there's some trouble with infinite loops inside
         //   the matcher below then...
         for (Match match; (match = rangeRe.Match(pattern)).Success;)
@@ -614,6 +611,7 @@ public sealed class GitignoreParser
             if (match.Groups[1].Value.Contains('/'))
             {
                 rooted = true;
+
                 // ^ cf. man page:
                 //
                 //   If there is a separator at the beginning or middle (or both)
@@ -621,16 +619,19 @@ public sealed class GitignoreParser
                 //   level of the particular .gitignore file itself. Otherwise
                 //   the pattern may also match at any level below the .gitignore level.
             }
-            reBuilder.Append(transpileRegexPart(match.Groups[1].Value));
+
+            reBuilder.Append(TranspileRegexPart(match.Groups[1].Value));
             reBuilder.Append('[').Append(match.Groups[2].Value).Append(']');
 
             pattern = pattern.Substring(match.Length);
         }
+
         if (!string.IsNullOrWhiteSpace(pattern))
         {
             if (pattern.Contains('/'))
             {
                 rooted = true;
+
                 // ^ cf. man page:
                 //
                 //   If there is a separator at the beginning or middle (or both)
@@ -638,11 +639,13 @@ public sealed class GitignoreParser
                 //   level of the particular .gitignore file itself. Otherwise
                 //   the pattern may also match at any level below the .gitignore level.
             }
-            reBuilder.Append(transpileRegexPart(pattern));
+
+            reBuilder.Append(TranspileRegexPart(pattern));
         }
 
         // prep regexes assuming we'll always prefix the check string with a '/':
         reBuilder.Prepend(rooted ? @"^\/" : @"\/");
+
         // cf spec:
         //
         //   If there is a separator at the end of the pattern then the pattern
@@ -652,8 +655,8 @@ public sealed class GitignoreParser
         // otherwise: match the file itself, or, when it is a directory, match the directory and anything within
         reBuilder.Append(directory ? @"\/" : @"(?:$|\/)");
 
-        // regex validation diagnostics: better to check if the part is valid
-        // then to discover it's gone haywire in the big conglomerate at the end.
+        /* regex validation diagnostics: better to check if the part is valid
+         then to discover it's gone haywire in the big conglomerate at the end. */
 
         string re = reBuilder.ToString();
 
@@ -673,38 +676,30 @@ public sealed class GitignoreParser
         return re;
     }
 
-#if DEBUG
-    public sealed class OnExpectedMatchFailEventArgs(
-        string query,
-        string input,
-        bool expected,
-        Regex acceptRe,
-        bool acceptTest,
-        Match? acceptMatch,
-        Regex denyRe,
-        bool denyTest,
-        Match? denyMatch,
-        string combine,
-        bool returnVal) : EventArgs
+    /// <summary>
+    /// Returns a list of relative paths of all subdirectories and files under the given directory (including the given directory itself).
+    /// </summary>
+    /// <param name="directory">The directory to traverse.</param>
+    /// <returns>The list of relative paths of subdirectories and files.</returns>
+    private static string[] ListFiles(DirectoryInfo directory)
     {
-        public string Query { get; set; } = query;
-        public string Input { get; set; } = input;
-        public bool Expected { get; set; } = expected;
-        public Regex AcceptRe { get; set; } = acceptRe;
-        public bool AcceptTest { get; set; } = acceptTest;
-        public Match? AcceptMatch { get; set; } = acceptMatch;
-        public Regex DenyRe { get; set; } = denyRe;
-        public bool DenyTest { get; set; } = denyTest;
-        public Match? DenyMatch { get; set; } = denyMatch;
-        public string Combine { get; set; } = combine;
-        public bool ReturnVal { get; set; } = returnVal;
+        var directoryPath = directory.FullName;
+
+        return ((IEnumerable<string>)["/"]).Concat(
+            Directory.GetFiles(directoryPath, "*.*", SearchOption.AllDirectories)
+                .Select(f => f.Substring(directoryPath.Length + 1))).ToArray();
     }
 
     /// <summary>
-    /// This event will be invoked if any of `Accepts()`, `Denies()` or `Inspects()`
-    /// fail to match the expected result.
+    /// Returns a tuple containing information about the acceptance or denieal of a file.
     /// </summary>
-    public event EventHandler<OnExpectedMatchFailEventArgs>? OnExpectedMatchFail;
+    /// <param name="directory">The directory to traverse.</param>
+    /// <returns>A tuple containing information about the acceptance or denieal of a file.</returns>
+    private (string FilePath, bool Accepted, bool Denied)[] ProcessFiles(DirectoryInfo directory)
+    {
+        var files = ListFiles(directory);
+        return files.Select(f => (FilePath: f, Accepted: this.Accepts(f), Denied: this.Denies(f))).ToArray();
+    }
 
     /// <summary>
     /// Helper invoked when any of `Accepts()`, `Denies()` or `Inspects()`
@@ -722,12 +717,12 @@ public sealed class GitignoreParser
         bool denyTest,
         Match? denyMatch,
         string combine,
-        bool returnVal
-    )
+        bool returnVal)
     {
-        if (OnExpectedMatchFail != null)
+        if (this.OnExpectedMatchFail != null)
         {
-            OnExpectedMatchFail(this,
+            this.OnExpectedMatchFail(
+                this,
                 new OnExpectedMatchFailEventArgs(
                     query,
                     input,
@@ -739,9 +734,7 @@ public sealed class GitignoreParser
                     denyTest,
                     denyMatch,
                     combine,
-                    returnVal
-                )
-            );
+                    returnVal));
             return;
         }
 
@@ -760,8 +753,109 @@ public sealed class GitignoreParser
                 'combine': '{{combine}}',
                 'returnVal': '{{returnVal}}'
             }
-            """
-        );
+            """);
+    }
+
+#if DEBUG
+    /// <summary>
+    /// Event arguments for the OnExpectedMatchFail event.
+    /// </summary>
+    public sealed class OnExpectedMatchFailEventArgs : EventArgs
+    {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="OnExpectedMatchFailEventArgs"/> class.
+        /// </summary>
+        /// <param name="query">The query string.</param>
+        /// <param name="input">The input string.</param>
+        /// <param name="expected">The expected result.</param>
+        /// <param name="acceptRe">The accept regex.</param>
+        /// <param name="acceptTest">The accept test result.</param>
+        /// <param name="acceptMatch">The accept match result.</param>
+        /// <param name="denyRe">The deny regex.</param>
+        /// <param name="denyTest">The deny test result.</param>
+        /// <param name="denyMatch">The deny match result.</param>
+        /// <param name="combine">The combine string.</param>
+        /// <param name="returnVal">The return value.</param>
+        public OnExpectedMatchFailEventArgs(
+            string query,
+            string input,
+            bool expected,
+            Regex acceptRe,
+            bool acceptTest,
+            Match? acceptMatch,
+            Regex denyRe,
+            bool denyTest,
+            Match? denyMatch,
+            string combine,
+            bool returnVal)
+        {
+            this.Query = query;
+            this.Input = input;
+            this.Expected = expected;
+            this.AcceptRe = acceptRe;
+            this.AcceptTest = acceptTest;
+            this.AcceptMatch = acceptMatch;
+            this.DenyRe = denyRe;
+            this.DenyTest = denyTest;
+            this.DenyMatch = denyMatch;
+            this.Combine = combine;
+            this.ReturnVal = returnVal;
+        }
+
+        /// <summary>
+        /// Gets or sets the query string.
+        /// </summary>
+        public string Query { get; set; }
+
+        /// <summary>
+        /// Gets or sets the input string.
+        /// </summary>
+        public string Input { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether gets or sets the expected result.
+        /// </summary>
+        public bool Expected { get; set; }
+
+        /// <summary>
+        /// Gets or sets the accept regex.
+        /// </summary>
+        public Regex AcceptRe { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the test should be accepted.
+        /// </summary>
+        public bool AcceptTest { get; set; }
+
+        /// <summary>
+        /// Gets or sets the accept match result.
+        /// </summary>
+        public Match? AcceptMatch { get; set; }
+
+        /// <summary>
+        /// Gets or sets the deny regex.
+        /// </summary>
+        public Regex DenyRe { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the test should be denied.
+        /// </summary>
+        public bool DenyTest { get; set; }
+
+        /// <summary>
+        /// Gets or sets the deny match result.
+        /// </summary>
+        public Match? DenyMatch { get; set; }
+
+        /// <summary>
+        /// Gets or sets the combine string.
+        /// </summary>
+        public string Combine { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the result of a match failure event is true or false.
+        /// </summary>
+        public bool ReturnVal { get; set; }
     }
 #endif
 }
