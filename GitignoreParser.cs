@@ -1,4 +1,4 @@
-#pragma warning disable SA1636 // File header copyright text should match
+﻿#pragma warning disable SA1636 // File header copyright text should match
 // Copied from (GitignoreParserNet by GerHobbelt (https://www.nuget.org/packages/GitignoreParserNet - https://github.com/GerHobbelt/gitignore-parser)
 // This code is licensed under the Apache 2.0 license.
 #pragma warning restore SA1636 // File header copyright text should match
@@ -760,7 +760,7 @@ public sealed class GitignoreParser
     /// <summary>
     /// Event arguments for the OnExpectedMatchFail event.
     /// </summary>
-    public sealed class OnExpectedMatchFailEventArgs : EventArgs
+    public class OnExpectedMatchFailEventArgs : EventArgs
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="OnExpectedMatchFailEventArgs"/> class.
